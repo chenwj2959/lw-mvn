@@ -1,9 +1,5 @@
 package com.cwj.mvn.framework.socket;
 
-import com.orhanobut.logger.Logger;
-import com.sound.bridge.framework.message.SendMessageAdaptor;
-import com.sound.bridge.utils.StringUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,6 +16,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * client socket的基本方法
  * 1. 连接
@@ -30,16 +29,15 @@ import java.util.concurrent.locks.ReentrantLock;
  * 6. 加密
  * 7. 断开
  */
-public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
-
-    private static int requestId = 0;
+public abstract class AbstractClientSocket<T> {
+    
+    protected static final Logger log = LoggerFactory.getLogger(AbstractClientSocket.class);
 
     public String TAG;
     private final Lock lock;  // 同步锁
     private InetAddress inetAddress; // 服务器地址
     private int port;   // 服务器端口
     private int connectTimeout;
-    public String threadName;
     private Socket socket;
     private boolean closed;
     private byte[] cache; // 未解析的数据缓存
@@ -49,7 +47,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         this.TAG = Objects.requireNonNull(builder.tag);
         this.port = Objects.requireNonNull(builder.port);
         this.inetAddress = Objects.requireNonNull(builder.inetAddress);
-        this.threadName = StringUtils.isEmpty(builder.threadName) ? builder.tag : builder.threadName;
         this.socket = builder.socket;
         this.connectTimeout = builder.connectTimeout;
         if (socket == null) connection();
@@ -112,10 +109,10 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         try {
             if (socket != null) socket.close();
             socket = null;
-            Logger.e("Disconnection socket success, thread {}  ", TAG);
+            log.error("Disconnection socket success, thread {}  ", TAG);
             return true;
         } catch (Exception e) {
-            Logger.e(e, "Disconnection socket failed, hostname = " + inetAddress.getHostName());
+            log.error("Disconnection socket failed, hostname = " + inetAddress.getHostName(), e);
             return false;
         }
     }
@@ -124,7 +121,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
      * 向服务器发送字符串
      * @param message 不能为空
      */
-    @Override
     public boolean send(T message) {
         if (message == null) throw new NullPointerException("message cannot be empty!");
         lock.lock();
@@ -136,7 +132,7 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
             afterSend(message);
             return true;
         } catch (Exception e) {
-            Logger.e(e, "Send message error");
+            log.error("Send message error", e);
             sendError(message, e);
             return false;
         } finally {
@@ -147,12 +143,19 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
     /**
      * 设置发送人, 发送时间等信息
      */
-    public abstract T setSender(T message);
-
+    public T setSender(T message) { 
+        return message; 
+    }
+    
     /**
-     * 获取报文中的requestId
+     * 发送成功后调用
      */
-    public abstract String getRequestId(T message);
+    public void afterSend(T message) {}
+    
+    /**
+     * 发送失败后调用
+     */
+    public void sendError(T message, Throwable e) {}
 
     /** 
      * 设置receive超时时间
@@ -161,7 +164,7 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         try {
             socket.setSoTimeout(timeout);
         } catch (SocketException e) {
-            Logger.e(e, e.getMessage());
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -178,31 +181,31 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
             try {
                 if (cache != null) {
                     int position = positionMessage(cache);
-                    Logger.d("Cache position = " + position);
+                    log.debug("Cache position = " + position);
                     if (position > 0) {
                         message = parseMessage(cache, position);
                         int cLen = cache.length;
                         if (position == cLen) {
-                            Logger.d("PARSE MESSAGE COMPLETE");
+                            log.debug("PARSE MESSAGE COMPLETE");
                             cache = null;
                         } else {
                             cLen -= position;
                             byte[] temp = new byte[cLen];
                             System.arraycopy(cache, position, temp, 0, cLen);
                             cache = temp;
-                            Logger.d("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
+                            log.debug("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
                         }
                         if (message != null && filter(message)) return message;
                         else message = null;
                     } else if (position < 0) {
-                        Logger.e("Pos < 0, drop current cache! cache = " + Arrays.toString(cache));
+                        log.error("Pos < 0, drop current cache! cache = " + Arrays.toString(cache));
                         cache = null;
                     }
                 }
                 InputStream is = socket.getInputStream();
                 int b = is.read();
                 if (b == -1) {
-                    Logger.e("Client socket input stream was shutdown");
+                    log.error("Client socket input stream was shutdown");
                     close();
                     break;
                 }
@@ -220,20 +223,20 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
                 while(ans < len) {
                     ans += is.read(buffer, ans, len - ans);
                 }
-                Logger.d("TOTAL BUFFER = " + buffer.length);
+                log.debug("TOTAL BUFFER = " + buffer.length);
                 int pos = positionMessage(buffer);
-                Logger.d("Position = " + pos);
+                log.debug("Position = " + pos);
                 if (pos > 0) {
                     message = parseMessage(buffer, pos);
                     int bLen = buffer.length;
                     if (pos == bLen) {
-                        Logger.d("PARSE MESSAGE COMPLETE");
+                        log.debug("PARSE MESSAGE COMPLETE");
                         cache = null;
                     } else {
                         int cLen = bLen - pos;
                         cache = new byte[cLen];
                         System.arraycopy(buffer, pos, cache, 0, cLen);
-                        Logger.d("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
+                        log.debug("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
                     }
                     if (message != null && filter(message)) break;
                     else {
@@ -241,17 +244,17 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
                         continue;
                     }
                 } else if (pos < 0) {
-                    Logger.e("Pos < 0, drop current buffer and cache! buffer length = " + buffer.length);
-                    Logger.e("buffer = " + Arrays.toString(buffer));
+                    log.error("Pos < 0, drop current buffer and cache! buffer length = " + buffer.length);
+                    log.error("buffer = " + Arrays.toString(buffer));
                     buffer = null;
                     cache = null;
                     message = null;
                     continue;
                 }
                 cache = buffer;
-                Logger.d("MESSAGE NOT COMPLETE, CACHE length = " + cache.length);
+                log.debug("MESSAGE NOT COMPLETE, CACHE length = " + cache.length);
             } catch (Exception e) {
-                Logger.e(e, "Receive message error");
+                log.error("Receive message error", e);
                 if ((++errorNum == 5) || e instanceof SocketException || e instanceof SocketTimeoutException) {
                     break;
                 }
@@ -261,16 +264,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
             }
         }
         return message;
-    }
-
-    /**
-     * 获取下一个requestId
-     */
-    protected static synchronized int getNextRequestId() {
-        if (String.valueOf(requestId).length() > 5) {
-            requestId = 0;
-        }
-        return requestId;
     }
 
     /**
@@ -304,16 +297,8 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
      */
     protected abstract T parseMessage(byte[] buffer, int length);
 
-    public void logon() {
-    }
-
-    /** 登出 */
-    public void logoff() {
-    }
-
     public void close() {
         if (closed()) return;
-        logoff();
         disconnection();
         this.closed = true;
     }
@@ -327,7 +312,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         private int port;
         private Socket socket;
         private String tag;
-        private String threadName;
         private int connectTimeout;
 
         public ClientBuilder() {
@@ -335,7 +319,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         }
 
         public ClientBuilder ip(String ip) throws UnknownHostException {
-            // 不需要反向查找IP，连接更快
             this.inetAddress = ipToInetAddress(ip);
             return this;
         }
@@ -350,10 +333,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         }
         public ClientBuilder tag(String tag) {
             this.tag = tag;
-            return this;
-        }
-        public ClientBuilder threadName(String threadName) {
-            this.threadName = threadName;
             return this;
         }
         /**
@@ -378,7 +357,6 @@ public abstract class AbstractClientSocket<T> implements SendMessageAdaptor<T> {
         for (int i = 0; i < 4; i++) {
             buffer[i] = (byte) Integer.parseInt(ipArray[i]);
         }
-        // 不需要反向查找IP，连接更快
         return InetAddress.getByAddress(buffer);
     }
 }

@@ -1,18 +1,21 @@
 package com.cwj.mvn.framework.socket;
 
-import com.orhanobut.logger.Logger;
-import com.sound.bridge.phase2.framework.BaseRunnable;
+import com.cwj.mvn.framework.BaseRunnable;
 
-public abstract class BridgeClientService<T> extends BaseRunnable {
+public abstract class AbstractClientService<T> extends BaseRunnable {
     
     protected AbstractClientSocket<T> client;
     
     protected AbstractOperationChain<T> handlers;
 
     protected static final int MAX_TIMEOUT_NUMBER = 2;
+    
+    public AbstractClientService(AbstractOperationChain<T> handlers) {
+        this(handlers.getClient(), handlers);
+    }
 
-    public BridgeClientService(AbstractClientSocket<T> client, AbstractOperationChain<T> handlers) {
-        super(client.TAG, client.threadName);
+    private AbstractClientService(AbstractClientSocket<T> client, AbstractOperationChain<T> handlers) {
+        super(client.TAG);
         this.client = client;
         this.handlers = handlers;
     }
@@ -29,10 +32,10 @@ public abstract class BridgeClientService<T> extends BaseRunnable {
                 }
                 beforeHandle(message);
                 if (!handlers.doHanlde(message)) {
-                    Logger.e("Do handle message has error, message = {}", message.toString());
+                    log.error("Do handle message has error, message = {}", message.toString());
                 }
             } catch (Exception e) {
-                Logger.e(e, e.getMessage());
+                log.error(e.getMessage(), e);
             }
         }
     }
