@@ -1,8 +1,13 @@
 package com.cwj.mvn;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +54,19 @@ public class SocketTest {
                     while (count < total) {
                         count += is.read(buffer, count, total - count);
                     }
+                    log.info("Buffer = {}", Arrays.toString(buffer));
                     log.info("Recieve buffer string = {}", new String(buffer, Constant.UTF8));
+                    
+                    File jar = new File("C:\\Demo\\Java\\Environment\\jar\\com\\alibaba\\fastjson\\1.2.62\\fastjson-1.2.62.jar");
+                    try (FileInputStream fis = new FileInputStream(jar)) {
+                        FileChannel fc = fis.getChannel();
+                        SocketChannel sc = client.getChannel();
+                        long startTime = System.nanoTime();
+                        long transferNum = fc.transferTo(0, fc.size(), sc);
+                        log.info("Transfer {} byte done, spend {} ms", transferNum, System.nanoTime() - startTime);
+                    } catch (Exception e) {
+                        
+                    }
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
                     close();

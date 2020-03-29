@@ -3,7 +3,7 @@ package com.cwj.mvn.framework.socket;
 import com.cwj.mvn.framework.socket.chain.AbstractHandler;
 import com.cwj.mvn.framework.socket.chain.AbstractHandlerChain;
 
-public abstract class AbstractOperationChain<T> extends AbstractHandlerChain<T, Boolean> {
+public class AbstractOperationChain<T> extends AbstractHandlerChain<T, Boolean> {
     
     public static final String CLIENT = "Client";
     
@@ -17,5 +17,4 @@ public abstract class AbstractOperationChain<T> extends AbstractHandlerChain<T, 
     public AbstractClientSocket<T> getClient() {
         return (AbstractClientSocket<T>) get(CLIENT);
     }
-
 }
