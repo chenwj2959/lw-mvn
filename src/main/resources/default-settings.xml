@@ -2,5 +2,5 @@
 <settings>
     <serverURLSuffix>/repository/maven-public</serverURLSuffix>
     <remoteURL>https://maven.aliyun.com/repository/public</remoteURL>
-    <localRepository>C:\Demo\Java\Environment\jar</localRepository>
+    <localRepository>C:\Program Files\jar</localRepository>
 </settings>
