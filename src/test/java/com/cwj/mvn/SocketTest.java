@@ -56,7 +56,7 @@ public class SocketTest {
                     log.info("Buffer = {}", Arrays.toString(buffer));
                     log.info("Recieve buffer string = {}", new String(buffer, Constant.UTF8));
                     
-                    HttpRequest httpRequest = new HttpRequest(new String(buffer));
+                    HttpRequest httpRequest = new HttpRequest(buffer);
                     System.out.println("Method: " + httpRequest.getMethod());
                     System.out.println("Protocol: " + httpRequest.getProtocol());
                     System.out.println("Route: " + httpRequest.getRoute());
@@ -69,4 +69,24 @@ public class SocketTest {
             }
         }
     }
+    
+    // POM
+//    GET /repository/maven-public/org/glassfish/jersey/bundles/repackaged/project/2.23.2/project-2.23.2.pom HTTP/1.1
+//    Cache-control: no-cache
+//    Cache-store: no-store
+//    Pragma: no-cache
+//    User-Agent: Apache-Maven/3.6.3 (Java 1.8.0_121; Windows 10 10.0)
+//    Host: 192.168.1.82:8081
+//    Connection: Keep-Alive
+//    Accept-Encoding: gzip,deflate
+    
+    // jar
+//    GET /repository/maven-public/javax/ws/rs/javax.ws.rs-api/2.0.1/javax.ws.rs-api-2.0.1.jar HTTP/1.1
+//    Cache-control: no-cache
+//    Cache-store: no-store
+//    Pragma: no-cache
+//    User-Agent: Apache-Maven/3.6.3 (Java 1.8.0_121; Windows 10 10.0)
+//    Host: 192.168.1.82:8081
+//    Connection: Keep-Alive
+//    Accept-Encoding: gzip,deflate
 }

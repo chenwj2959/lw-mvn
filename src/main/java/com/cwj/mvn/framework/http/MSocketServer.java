@@ -7,7 +7,7 @@ import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperationChain;
 import com.cwj.mvn.framework.socket.AbstractSocketService;
 
-public class MSocketServer extends AbstractSocketService<String> {
+public class MSocketServer extends AbstractSocketService<byte[]> {
 
     public MSocketServer(String tag, int port) throws Exception {
         super(tag, port);
@@ -19,7 +19,7 @@ public class MSocketServer extends AbstractSocketService<String> {
     }
 
     @Override
-    public AbstractClientSocket<String> createClientSocket(String tag, Socket socket) throws Exception {
+    public AbstractClientSocket<byte[]> createClientSocket(String tag, Socket socket) throws Exception {
         return new MClientSocket.ClientBuilder()
                 .socket(socket)
                 .tag(tag)
@@ -27,9 +27,9 @@ public class MSocketServer extends AbstractSocketService<String> {
     }
 
     @Override
-    public AbstractClientService<String> createClientService(AbstractClientSocket<String> client) {
+    public AbstractClientService<byte[]> createClientService(AbstractClientSocket<byte[]> client) {
         try {
-            AbstractOperationChain<String> handlers = new AbstractOperationChain<String>(client, MClientOperation.class);
+            AbstractOperationChain<byte[]> handlers = new AbstractOperationChain<byte[]>(client, MClientOperation.class);
             return new MClientService(handlers);
         } catch (Exception e) {
             log.error("Create client service failed!", e);

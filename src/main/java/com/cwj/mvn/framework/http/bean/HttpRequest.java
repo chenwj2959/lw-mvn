@@ -21,7 +21,8 @@ public class HttpRequest {
     private HttpHeader headers;
     private HttpParameter parameters;
     
-    public HttpRequest(String requestStr) {
+    public HttpRequest(byte[] buffer) {
+        String requestStr = new String(buffer);
         String[] requestArr = requestStr.split(CHUNK_BREAK);
         if (requestArr.length == 0) {
             throw new RuntimeException("Http request string format error");
@@ -64,9 +65,9 @@ public class HttpRequest {
             headers.put(bodyArr[i].substring(0, colonIndex).trim(), bodyArr[i].substring(colonIndex + 1).trim());
         }
         // 解析请求数据
-        String requestData = requestArr[1];
         int contentLength = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
         if (contentLength > 0 && requestArr.length > 1) {
+            String requestData = requestArr[1];
             String contentType = headers.get(HttpHeader.CONTENT_TYPE);
             if (HttpHeader.TYPE_MULTIPART.equals(contentType)) {
                 // FIXME 处理Multipart

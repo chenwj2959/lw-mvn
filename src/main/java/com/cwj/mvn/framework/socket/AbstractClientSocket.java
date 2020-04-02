@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -138,6 +139,13 @@ public abstract class AbstractClientSocket<T> {
         } finally {
             lock.unlock();
         }
+    }
+    
+    /**
+     * 获取socket通道
+     */
+    public SocketChannel getChannel() {
+        return socket.getChannel();
     }
     
     /**
@@ -316,6 +324,11 @@ public abstract class AbstractClientSocket<T> {
 
         public ClientBuilder() {
             this.connectTimeout = 5000; // 默认连接超时时间
+        }
+        
+        public ClientBuilder domain(String domain) throws UnknownHostException {
+            this.inetAddress = InetAddress.getByName(domain);
+            return this;
         }
 
         public ClientBuilder ip(String ip) throws UnknownHostException {
