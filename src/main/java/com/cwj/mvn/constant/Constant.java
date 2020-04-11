@@ -6,4 +6,6 @@ public class Constant {
 
     public static final Charset UTF8 = Charset.forName("utf8");
     public static final String LOG_NAME = "logName";
+    
+    public static final String THREAD_LW_MVN = "lw-mvn";
 }

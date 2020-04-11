@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
-    <serverURLSuffix>/repository/maven-public</serverURLSuffix>
+    <localServerURLSuffix>/repository/maven-public</localServerURLSuffix>
+    <localRepository>C:/Program Files/jar</localRepository>
+    <localPort>80</localPort>
     <remoteURL>https://maven.aliyun.com/repository/public</remoteURL>
-    <localRepository>C:\Program Files\jar</localRepository>
 </settings>

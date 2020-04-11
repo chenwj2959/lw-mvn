@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSONObject;
+import com.cwj.mvn.core.MSocketServer;
 
 public class ThreadPool {
     
@@ -148,16 +149,19 @@ public class ThreadPool {
     /**
      * 开启默认服务
      */
-    public boolean start() {
+    public static boolean start() {
         JSONObject closeJson = closed();
         if (!closeJson.getBoolean(SIGN_CLOSED)) {
-            log.error("Bridge is closed!");
+            log.error("Server is closed!");
             return false;
         }
         try {
+            int port = Integer.parseInt(Settings.getSetting(Settings.LOCAL_PORT));
+            MSocketServer mSocketServer = new MSocketServer(port);
+            putServer(mSocketServer);
             return true;
         } catch (Exception e) {
-            log.error("Start bridge failed!", e);
+            log.error("Start server failed!", e);
             close();
             return false;
         }
@@ -166,8 +170,8 @@ public class ThreadPool {
     /**
      * 调用threadMap中所有线程的close()方法
      */
-    public void close() {
-        log.info("Close bridge server start");
+    public static void close() {
+        log.info("Close server start");
         for (Map.Entry<String, BaseRunnable> threads : runnableMap.entrySet()) {
             log.info("Closing " + threads.getKey() + " thread");
             threads.getValue().close();
@@ -183,7 +187,7 @@ public class ThreadPool {
      *     "activeThread": "heartbeat,posServer,couldServer"
      * }
      */
-    public JSONObject closed() {
+    public static JSONObject closed() {
         int activeCount = 0;
         StringBuilder activeThread = new StringBuilder();
         for (Map.Entry<String, Future<?>> futures : futureMap.entrySet()) {
@@ -210,7 +214,7 @@ public class ThreadPool {
      * @throws NullPointerException tag不存在
      * @throws RuntimeException newTag已存在
      */
-    public boolean updateTag(String tag, String newTag) {
+    public static boolean updateTag(String tag, String newTag) {
         if (contains(newTag)) {
             throw new RuntimeException("Update [" + tag + "] tag failed, New tag [" + newTag + "] is already exits");
         }

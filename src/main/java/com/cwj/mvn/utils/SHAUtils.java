@@ -13,6 +13,13 @@ public class SHAUtils {
     private static final String CHARSET_UTF8 = "utf8";
     
     /**
+     * 对byte[]进行SHA1摘要
+     */
+    public static String SHA1(final byte[] buffer) {
+        return SHA(buffer, "SHA1");
+    }
+    
+    /**
      * 对object进行SHA1摘要
      */
     public static String SHA1(final Object obj) {

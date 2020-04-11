@@ -8,12 +8,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -110,7 +108,7 @@ public abstract class AbstractClientSocket<T> {
         try {
             if (socket != null) socket.close();
             socket = null;
-            log.error("Disconnection socket success, thread {}  ", TAG);
+            log.error("Disconnection socket success");
             return true;
         } catch (Exception e) {
             log.error("Disconnection socket failed, hostname = " + inetAddress.getHostName(), e);
@@ -180,96 +178,86 @@ public abstract class AbstractClientSocket<T> {
      * 阻塞线程直到收取到服务器发送的数据
      * 需要循环监听，避免丢失数据
      * @return 单条报文
+     * @throws Exception 
      */
-    public T receive() {
+    public T receive() throws Exception {
         T message = null;
-        int errorNum = 0;
         while (!closed()) {
             byte[] buffer = null;
-            try {
-                if (cache != null) {
-                    int position = positionMessage(cache);
-                    log.debug("Cache position = " + position);
-                    if (position > 0) {
-                        message = parseMessage(cache, position);
-                        int cLen = cache.length;
-                        if (position == cLen) {
-                            log.debug("PARSE MESSAGE COMPLETE");
-                            cache = null;
-                        } else {
-                            cLen -= position;
-                            byte[] temp = new byte[cLen];
-                            System.arraycopy(cache, position, temp, 0, cLen);
-                            cache = temp;
-                            log.debug("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
-                        }
-                        if (message != null && filter(message)) return message;
-                        else message = null;
-                    } else if (position < 0) {
-                        log.error("Pos < 0, drop current cache! cache = " + Arrays.toString(cache));
-                        cache = null;
-                    }
-                }
-                InputStream is = socket.getInputStream();
-                int b = is.read();
-                if (b == -1) {
-                    log.error("Client socket input stream was shutdown");
-                    close();
-                    break;
-                }
-                int ans = 0;
-                int len = is.available() + 1;
-                if (cache == null) {
-                    buffer = new byte[len];
-                } else {
-                    ans = cache.length;
-                    len += ans;
-                    buffer = new byte[len];
-                    System.arraycopy(cache, 0, buffer, 0, ans);
-                }
-                buffer[ans++] = (byte) b;
-                while(ans < len) {
-                    ans += is.read(buffer, ans, len - ans);
-                }
-                log.debug("TOTAL BUFFER = " + buffer.length);
-                int pos = positionMessage(buffer);
-                log.debug("Position = " + pos);
-                if (pos > 0) {
-                    message = parseMessage(buffer, pos);
-                    int bLen = buffer.length;
-                    if (pos == bLen) {
+            if (cache != null) {
+                int position = positionMessage(cache);
+                log.debug("Cache position = " + position);
+                if (position > 0) {
+                    message = parseMessage(cache, position);
+                    int cLen = cache.length;
+                    if (position == cLen) {
                         log.debug("PARSE MESSAGE COMPLETE");
                         cache = null;
                     } else {
-                        int cLen = bLen - pos;
-                        cache = new byte[cLen];
-                        System.arraycopy(buffer, pos, cache, 0, cLen);
+                        cLen -= position;
+                        byte[] temp = new byte[cLen];
+                        System.arraycopy(cache, position, temp, 0, cLen);
+                        cache = temp;
                         log.debug("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
                     }
-                    if (message != null && filter(message)) break;
-                    else {
-                        message = null;
-                        continue;
-                    }
-                } else if (pos < 0) {
-                    log.error("Pos < 0, drop current buffer and cache! buffer length = " + buffer.length);
-                    log.error("buffer = " + Arrays.toString(buffer));
-                    buffer = null;
+                    if (message != null && filter(message)) return message;
+                    else message = null;
+                } else if (position < 0) {
+                    log.error("Pos < 0, drop current cache! cache = " + Arrays.toString(cache));
                     cache = null;
+                }
+            }
+            InputStream is = socket.getInputStream();
+            int b = is.read();
+            if (b == -1) {
+                log.error("Client socket input stream was shutdown");
+                close();
+                break;
+            }
+            int ans = 0;
+            int len = is.available() + 1;
+            if (cache == null) {
+                buffer = new byte[len];
+            } else {
+                ans = cache.length;
+                len += ans;
+                buffer = new byte[len];
+                System.arraycopy(cache, 0, buffer, 0, ans);
+            }
+            buffer[ans++] = (byte) b;
+            while(ans < len) {
+                ans += is.read(buffer, ans, len - ans);
+            }
+            log.debug("TOTAL BUFFER = " + buffer.length);
+            int pos = positionMessage(buffer);
+            log.debug("Position = " + pos);
+            if (pos > 0) {
+                message = parseMessage(buffer, pos);
+                int bLen = buffer.length;
+                if (pos == bLen) {
+                    log.debug("PARSE MESSAGE COMPLETE");
+                    cache = null;
+                } else {
+                    int cLen = bLen - pos;
+                    cache = new byte[cLen];
+                    System.arraycopy(buffer, pos, cache, 0, cLen);
+                    log.debug("HAS MORE THAN ONE MESSAGE, CACHE LENGTH = " + cache.length);
+                }
+                if (message != null && filter(message)) break;
+                else {
                     message = null;
                     continue;
                 }
-                cache = buffer;
-                log.debug("MESSAGE NOT COMPLETE, CACHE length = " + cache.length);
-            } catch (Exception e) {
-                log.error("Receive message error", e);
-                if ((++errorNum == 5) || e instanceof SocketException || e instanceof SocketTimeoutException) {
-                    break;
-                }
-                try {
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e1) {}
+            } else if (pos < 0) {
+                log.error("Pos < 0, drop current buffer and cache! buffer length = " + buffer.length);
+                log.error("buffer = " + Arrays.toString(buffer));
+                buffer = null;
+                cache = null;
+                message = null;
+                continue;
             }
+            cache = buffer;
+            log.debug("MESSAGE NOT COMPLETE, CACHE length = " + cache.length);
         }
         return message;
     }

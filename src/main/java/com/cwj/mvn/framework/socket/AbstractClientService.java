@@ -1,5 +1,7 @@
 package com.cwj.mvn.framework.socket;
 
+import java.net.SocketException;
+
 import com.cwj.mvn.framework.BaseRunnable;
 
 public abstract class AbstractClientService<T> extends BaseRunnable {
@@ -34,6 +36,9 @@ public abstract class AbstractClientService<T> extends BaseRunnable {
                 if (!handlers.doHanlde(message)) {
                     log.error("Do handle message has error, message = {}", message.toString());
                 }
+            } catch (SocketException e) {
+                log.error(e.getMessage(), e);
+                break;
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             }

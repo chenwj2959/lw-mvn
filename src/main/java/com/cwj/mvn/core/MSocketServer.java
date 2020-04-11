@@ -1,7 +1,8 @@
-package com.cwj.mvn.framework.http;
+package com.cwj.mvn.core;
 
 import java.net.Socket;
 
+import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.framework.socket.AbstractClientService;
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperationChain;
@@ -9,8 +10,8 @@ import com.cwj.mvn.framework.socket.AbstractSocketService;
 
 public class MSocketServer extends AbstractSocketService<byte[]> {
 
-    public MSocketServer(String tag, int port) throws Exception {
-        super(tag, port);
+    public MSocketServer(int port) throws Exception {
+        super(Constant.THREAD_LW_MVN, port);
     }
 
     @Override

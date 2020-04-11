@@ -1,8 +1,9 @@
-package com.cwj.mvn.framework.http;
+package com.cwj.mvn.core;
 
 import java.io.IOException;
 
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
+import com.cwj.mvn.utils.ByteUtils;
 
 public class MClientSocket extends AbstractClientSocket<byte[]> {
     
@@ -16,31 +17,23 @@ public class MClientSocket extends AbstractClientSocket<byte[]> {
     protected byte[] encrypt(byte[] message) {
         return message;
     }
-
+    
+    public MClientSocket() throws IOException {
+        super(null);
+    }
+    
     @Override
     protected int positionMessage(byte[] buffer) {
-      int len = buffer.length;
-      if (len < 4)  return 0;
-      byte first = REQUEST_END[0];
-      int max = len - 4;
-      for (int i = 0; i < len; i++) {
-          if (buffer[i] != first) {
-              while (++i <= max && buffer[i] != first);
-          }
-          if (i < max) {
-              int j = i + 1;
-              int end = i + 4;
-              for (int k = 1; j < end && REQUEST_END[k] == buffer[j]; k++, j++);
-              if (j == end) return i;
-          }
-      }
-      return 0;
+        int pos = ByteUtils.indexOf(buffer, REQUEST_END);
+        if (pos == -1) return 0;
+        return pos + 4;
     }
 
     @Override
     protected byte[] parseMessage(byte[] buffer, int length) {
         byte[] msg = new byte[length];
         System.arraycopy(buffer, 0, msg, 0, length);
+        log.info("Receive message = {}", new String(msg));
         return msg;
     }
     

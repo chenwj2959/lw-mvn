@@ -1,12 +1,12 @@
 package com.cwj.mvn;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cwj.mvn.framework.Settings;
+import com.cwj.mvn.framework.ThreadPool;
 
 public class MainActive {
     
-    private static final Logger log = LoggerFactory.getLogger(MainActive.class);
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        Settings.loadSettings();
+        ThreadPool.start();
     }
 }

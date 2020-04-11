@@ -1,4 +1,4 @@
-package com.cwj.mvn.framework.http;
+package com.cwj.mvn.core;
 
 import com.cwj.mvn.framework.socket.AbstractClientService;
 import com.cwj.mvn.framework.socket.AbstractOperationChain;

@@ -25,4 +25,12 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String TYPE_JSON = "application/json";
     public static final String TYPE_XML = "application/xml";
     public static final String TYPE_JAVA_ARCHIVE = "application/java-archive"; // download jar
+    
+    public HttpHeader() {
+        put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_JSON);
+        put(HttpHeader.CONTENT_LENGTH, "0");
+        put(HttpHeader.SERVER, "LW-MAVEN/1.0.0");
+        put(HttpHeader.X_CONTENT_TYPE_OPTIONS, "nosniff");
+        put(HttpHeader.CONTENT_SECURITY_POLICY, "sandbox allow-forms allow-modals allow-popups allow-presentation allow-scripts allow-top-navigation");
+    }
 }
