@@ -2,11 +2,15 @@ package com.cwj.mvn.framework.http.bean;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cwj.mvn.framework.Settings;
 import com.cwj.mvn.utils.ByteUtils;
 
 public class HttpRequest {
     
+    private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
     private static final String LOCAL_URL_SUFFIX = Settings.getSetting(Settings.LOCAL_URL_SUFFIX); // 从配置文件中获取URL后缀
     
     private static final byte[] CHUNK_BREAK = {13, 10, 13, 10}; // CR LF CR LF
@@ -41,6 +45,7 @@ public class HttpRequest {
         method = new String(urlArr.get(0));
         route = new String(urlArr.get(1));
         protocol = new String(urlArr.get(2));
+        log.info("Receive {} {} {}", method, route, protocol);
         
         // ---- 路由要减去默认部分
         int suffixIndex = route.indexOf(LOCAL_URL_SUFFIX);

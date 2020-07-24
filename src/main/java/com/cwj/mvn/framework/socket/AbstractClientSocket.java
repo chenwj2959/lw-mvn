@@ -40,6 +40,7 @@ public abstract class AbstractClientSocket<T> {
     private Socket socket;
     private boolean closed;
     private byte[] cache; // 未解析的数据缓存
+    protected boolean debug;
 
     protected AbstractClientSocket(ClientBuilder builder) throws IOException {
         Objects.requireNonNull(builder);
@@ -48,6 +49,7 @@ public abstract class AbstractClientSocket<T> {
         this.inetAddress = Objects.requireNonNull(builder.inetAddress);
         this.socket = builder.socket;
         this.connectTimeout = builder.connectTimeout;
+        this.debug = builder.debug;
         if (socket == null) connection();
         this.lock = new ReentrantLock();
         this.closed = false;
@@ -115,12 +117,20 @@ public abstract class AbstractClientSocket<T> {
             return false;
         }
     }
-
+    
     /**
      * 向服务器发送字符串
      * @param message 不能为空
      */
     public boolean send(T message) {
+        return send(message, true);
+    }
+
+    /**
+     * 向服务器发送字符串
+     * @param message 不能为空
+     */
+    public boolean send(T message, boolean output) {
         if (message == null) throw new NullPointerException("message cannot be empty!");
         lock.lock();
         try {
@@ -128,7 +138,7 @@ public abstract class AbstractClientSocket<T> {
             message = setSender(message);
             os.write(encrypt(message));
             os.flush();
-            afterSend(message);
+            if (output) afterSend(message);
             return true;
         } catch (Exception e) {
             log.error("Send message error", e);
@@ -173,7 +183,7 @@ public abstract class AbstractClientSocket<T> {
             log.error(e.getMessage(), e);
         }
     }
-
+    
     /**
      * 阻塞线程直到收取到服务器发送的数据
      * 需要循环监听，避免丢失数据
@@ -181,11 +191,22 @@ public abstract class AbstractClientSocket<T> {
      * @throws Exception 
      */
     public T receive() throws Exception {
+        return receive(0);
+    }
+
+    /**
+     * 阻塞线程直到收取到服务器发送的数据
+     * 需要循环监听，避免丢失数据
+     * @param readLen 收到readLen长度的byte则返回, 不用判断
+     * @return 单条报文
+     * @throws Exception 
+     */
+    public T receive(int readLen) throws Exception {
         T message = null;
         while (!closed()) {
             byte[] buffer = null;
             if (cache != null) {
-                int position = positionMessage(cache);
+                int position = readLen > 0 && cache.length >= readLen ? readLen : positionMessage(cache);
                 log.debug("Cache position = " + position);
                 if (position > 0) {
                     message = parseMessage(cache, position);
@@ -229,7 +250,7 @@ public abstract class AbstractClientSocket<T> {
                 ans += is.read(buffer, ans, len - ans);
             }
             log.debug("TOTAL BUFFER = " + buffer.length);
-            int pos = positionMessage(buffer);
+            int pos = readLen > 0 && buffer.length >= readLen ? readLen : positionMessage(buffer);
             log.debug("Position = " + pos);
             if (pos > 0) {
                 message = parseMessage(buffer, pos);
@@ -309,9 +330,11 @@ public abstract class AbstractClientSocket<T> {
         private Socket socket;
         private String tag;
         private int connectTimeout;
+        private boolean debug;
 
         public ClientBuilder() {
             this.connectTimeout = 5000; // 默认连接超时时间
+            this.debug = true;
         }
         
         public ClientBuilder domain(String domain) throws UnknownHostException {
@@ -341,6 +364,10 @@ public abstract class AbstractClientSocket<T> {
          */
         public ClientBuilder connectTimeout(int connectTimeout) {
             this.connectTimeout = connectTimeout;
+            return this;
+        }
+        public ClientBuilder debug(boolean debug) {
+            this.debug = debug;
             return this;
         }
         @SuppressWarnings("unchecked")

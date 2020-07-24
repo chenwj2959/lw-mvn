@@ -7,7 +7,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +23,7 @@ import com.cwj.mvn.framework.http.bean.HttpResponse;
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperation;
 import com.cwj.mvn.utils.DateUtils;
-import com.cwj.mvn.utils.SHAUtils;
+import com.cwj.mvn.utils.FileUtils;
 
 public class MClientOperation extends AbstractOperation<byte[]> {
     
@@ -56,10 +57,13 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             
             // 从远程仓库下载
             try {
+                URI url = new URI(REMOTE_URL);
                 MClientSocket mClient = new MClientSocket.ClientBuilder()
-                        .domain(getHost())
+                        .ip(url.getHost())
+                        .port(url.getPort())
                         .connectTimeout(5000)
                         .tag(route)
+                        .debug(false)
                         .build(MClientSocket.class);
                 mClient.connection();
                 mClient.send(message);
@@ -67,12 +71,14 @@ public class MClientOperation extends AbstractOperation<byte[]> {
                 HttpResponse resp = HttpResponse.parse(buffer);
                 HttpMsg httpMsg = resp.getHttpMsg();
                 if (httpMsg.code() == 200) {
-//                    HttpHeader headers = resp.getHeaders();
-//                    String contentType = headers.get(HttpHeader.CONTENT_TYPE);
+                    HttpHeader headers = resp.getHeaders();
+                    int length = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
+                    if (length == 0) { // TODO 没有文件返回
+                        return true;
+                    }
                     HttpParameter parameters = resp.getParameters();
-                    byte[] jarBuffer = parameters.getData(contentType);
-                    if (writeJarFile(resource, jarBuffer)) {
-                        writeSHA1File(resource);
+                    byte[] jarBuffer = parameters == null ? mClient.receive(length) : parameters.getData(contentType);
+                    if (FileUtils.write(jarBuffer, resource)) {
                         returnFileIfExists(resource, contentType, request, client);
                     } else {
                         // 文件保存失败处理
@@ -96,7 +102,8 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             HttpResponse resp = new HttpResponse(request.getProtocol(), HttpMsg.OK);
             HttpHeader headers = resp.getHeaders();
             headers.put(HttpHeader.CONTENT_TYPE, contentType);
-            headers.put(HttpHeader.ETAG, readSHA1Str(file));
+            String etag = "\"" + readSHA1Str(file) + "\"";
+            if (etag != null) headers.put(HttpHeader.ETAG, etag);
             headers.put(HttpHeader.LAST_MODIFIED, DateUtils.dateToString(file.lastModified(), DateUtils.EdMyHms_GMT));
             try (FileInputStream fis = new FileInputStream(file)) {
                 HttpParameter parameters = resp.getParameters();
@@ -113,10 +120,11 @@ public class MClientOperation extends AbstractOperation<byte[]> {
                 parameters.put(HttpParameter.DATA, buffer);
                 
                 resp.send(client);
+                return true;
             } catch (Exception e) {
                 log.error("Return response failed!", e);
+                return false;
             }
-            return true;
         }
         return false;
     }
@@ -131,7 +139,8 @@ public class MClientOperation extends AbstractOperation<byte[]> {
     private boolean returnByByte(byte[] jarBuffer, String contentType, HttpRequest request, AbstractClientSocket<byte[]> client) {
         HttpResponse resp = new HttpResponse(request.getProtocol(), HttpMsg.OK);
         HttpHeader headers = resp.getHeaders();
-        headers.put(HttpHeader.ETAG, SHAUtils.SHA1(jarBuffer));
+        String etag = "\"" + getSha1ByByte(jarBuffer) + "\"";
+        if (etag != null) headers.put(HttpHeader.ETAG, etag);
         headers.put(HttpHeader.LAST_MODIFIED, DateUtils.dateToString(new Date(), DateUtils.EdMyHms_GMT));
         headers.put(HttpHeader.CONTENT_TYPE, contentType);
         HttpParameter parameters = resp.getParameters();
@@ -157,7 +166,8 @@ public class MClientOperation extends AbstractOperation<byte[]> {
                 log.error("Read sha1 file failed!", e);
             }
         }
-        String sha1 = SHAUtils.SHA1(jarFile);
+        String sha1 = getSha1ByFile(jarFile);
+        if (sha1 == null) return sha1;
         try {
             respSHAFile.createNewFile();
             try (FileOutputStream fos = new FileOutputStream(respSHAFile)) {
@@ -173,41 +183,51 @@ public class MClientOperation extends AbstractOperation<byte[]> {
     }
     
     /**
-     * 保存buffer到jar文件
+     * 根据jar包输入流获取该文件的sha1码
+     * @param file
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
      */
-    private boolean writeJarFile(File jarFile, byte[] buffer) {
-        try (FileOutputStream fos = new FileOutputStream(jarFile)) {
-            fos.write(buffer);
-            fos.flush();
-            return true;
-        } catch (Exception e) {
-            log.error("Write jar file failed!", e);
-            return false;
-        }
-    }
-    
-    /**
-     * 根据jar文件，生成sha1写入文件
-     */
-    private void writeSHA1File(File jarFile) {
-        if (jarFile.exists()) {
-            String sha1Str = SHAUtils.SHA1(jarFile);
-            String jarFilePath = jarFile.getAbsolutePath();
-            try (FileOutputStream fos = new FileOutputStream(jarFilePath + SHA_FILE_SUFFIX)) {
-                fos.write(sha1Str.getBytes());
-                fos.flush();
-            } catch (Exception e) {
-                log.error("Write sha1 file failed! jar path is " + jarFilePath, e);
+    private String getSha1ByFile(File file) {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+            byte[] data = new byte[1024];
+            int read;
+            while ((read = fis.read(data)) != -1) {
+                sha1.update(data, 0, read);
             }
+            byte[] hashBytes = sha1.digest();
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < hashBytes.length; i++) {
+                sb.append(Integer.toString((hashBytes[i] & 0xff) + 0x100, 16).substring(1));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return null;
         }
     }
     
     /**
-     * 获取remote host
+     * 根据jar包二进制输入流获取该文件的sha1码
+     * @param file
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
      */
-    private String getHost() throws URISyntaxException {
-        URI url = new URI(REMOTE_URL);
-        return url.getHost();
+    private String getSha1ByByte(byte[] data) {
+        try {
+            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+            sha1.update(data, 0, data.length);
+            byte[] hashBytes = sha1.digest();
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < hashBytes.length; i++) {
+                sb.append(Integer.toString((hashBytes[i] & 0xff) + 0x100, 16).substring(1));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return null;
+        }
     }
     
     /**

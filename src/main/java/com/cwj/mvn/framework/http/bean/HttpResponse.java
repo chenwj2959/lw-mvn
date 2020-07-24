@@ -63,6 +63,8 @@ public class HttpResponse {
         }
         // 解析response数据
         int contentLength = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
+//        System.out.println(Arrays.toString(respArr.get(0)));
+//        System.out.println(new String(respArr.get(0)));
         if (contentLength > 0 && respArr.size() > 1) {
             HttpParameter httpParameter = new HttpParameter();
             httpParameter.put(HttpParameter.DATA, respArr.get(1));
@@ -77,7 +79,6 @@ public class HttpResponse {
     public void send(AbstractClientSocket<byte[]> client) {
         headers.put(HttpHeader.DATE, DateUtils.dateToString(new Date(), DateUtils.EdMyHms_GMT));
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            bos.write(LINE_BREAK);
             // 写入缓冲
             byte[] buffer = null;
             if (parameters != null && (parameters.size() > 0 || parameters.get(HttpParameter.DATA) != null)) {
@@ -92,6 +93,7 @@ public class HttpResponse {
             bos.write(SPLIT_BREAK);
             bos.write(httpMsg.msg().getBytes());
             bos.write(LINE_BREAK);
+            log.info("Send {} {} {}", protocol, httpMsg.code(), httpMsg.msg());
             // headers
             for (Map.Entry<String, String> header : headers.entrySet()) {
                 bos.write(header.getKey().getBytes());
@@ -100,6 +102,7 @@ public class HttpResponse {
                 bos.write(header.getValue().getBytes());
                 bos.write(LINE_BREAK);
             }
+            bos.write(LINE_BREAK);
             if (buffer != null) bos.write(buffer);
             client.send(bos.toByteArray());
         } catch (Exception e) {

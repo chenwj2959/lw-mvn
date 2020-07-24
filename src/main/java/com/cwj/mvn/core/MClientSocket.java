@@ -33,13 +33,14 @@ public class MClientSocket extends AbstractClientSocket<byte[]> {
     protected byte[] parseMessage(byte[] buffer, int length) {
         byte[] msg = new byte[length];
         System.arraycopy(buffer, 0, msg, 0, length);
-        log.info("Receive message = {}", new String(msg));
+        if (debug) log.info("Receive message = {}", new String(msg));
         return msg;
     }
     
     @Override
     public void afterSend(byte[] message) {
-        log.info("Send to message = {}", new String(message));
+        int pos = ByteUtils.indexOf(message, REQUEST_END);
+        if (debug) log.info("Send to message = {}", new String(message, 0, pos));
     }
     
     @Override

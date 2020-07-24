@@ -24,6 +24,7 @@ public class MSocketServer extends AbstractSocketService<byte[]> {
         return new MClientSocket.ClientBuilder()
                 .socket(socket)
                 .tag(tag)
+                .debug(false)
                 .build(MClientSocket.class);
     }
 
