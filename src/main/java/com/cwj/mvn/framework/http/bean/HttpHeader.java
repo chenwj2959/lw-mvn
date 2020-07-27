@@ -17,8 +17,14 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String CONTENT_SECURITY_POLICY = "Content-Security-Policy";
     public static final String LAST_MODIFIED = "Last-Modified";
     public static final String ETAG = "ETag";
+    public static final String LOCATION = "Location";
+    public static final String CONNECTION = "Connection";
+    
+    // HTTP header value
+    public static final String KEEP_ALIVE = "keep-alive";
     
     // Content-Type
+    public static final String TYPE_HTML = "text/html";
     public static final String TYPE_URLENCODE = "application/x-www-form-urlencoded";
     public static final String TYPE_MULTIPART = "multipart/form-data";
     public static final String TYPE_TEXT_PLAIN = "text/plain";

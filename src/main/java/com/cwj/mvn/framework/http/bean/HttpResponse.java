@@ -63,8 +63,6 @@ public class HttpResponse {
         }
         // 解析response数据
         int contentLength = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
-//        System.out.println(Arrays.toString(respArr.get(0)));
-//        System.out.println(new String(respArr.get(0)));
         if (contentLength > 0 && respArr.size() > 1) {
             HttpParameter httpParameter = new HttpParameter();
             httpParameter.put(HttpParameter.DATA, respArr.get(1));

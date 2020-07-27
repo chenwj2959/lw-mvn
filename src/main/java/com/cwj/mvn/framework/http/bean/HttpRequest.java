@@ -1,12 +1,16 @@
 package com.cwj.mvn.framework.http.bean;
 
+import java.net.HttpURLConnection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cwj.mvn.framework.Settings;
 import com.cwj.mvn.utils.ByteUtils;
+import com.cwj.mvn.utils.HttpUtils;
 
 public class HttpRequest {
     
@@ -23,7 +27,7 @@ public class HttpRequest {
     
     private String protocol; // HTTP/1.0 or HTTP/1.1
     private String method; // support GET and POST
-    private String route; 
+    private String path; // 具体文件路径 
     private HttpHeader headers;
     private HttpParameter parameters;
 
@@ -43,20 +47,20 @@ public class HttpRequest {
         parameters = new HttpParameter();
         
         method = new String(urlArr.get(0));
-        route = new String(urlArr.get(1));
+        path = new String(urlArr.get(1));
         protocol = new String(urlArr.get(2));
-        log.info("Receive {} {} {}", method, route, protocol);
+        log.info("Receive {} {} {}", method, path, protocol);
         
-        // ---- 路由要减去默认部分
-        int suffixIndex = route.indexOf(LOCAL_URL_SUFFIX);
+        // ---- 路径要减去默认部分
+        int suffixIndex = path.indexOf(LOCAL_URL_SUFFIX);
         if (suffixIndex == 0) {
-            route = route.substring(LOCAL_URL_SUFFIX.length());
+            path = path.substring(LOCAL_URL_SUFFIX.length());
         }
         
-        int questionMaskIndex = route.indexOf(QUESTION_MASK); // 解析跟在URL后面的参数
-        if (questionMaskIndex != -1 && questionMaskIndex != route.length() - 1) {
-            String[] parametersArr = route.substring(questionMaskIndex + 1).split(PARAMETER_BREAK);
-            route = route.substring(0, questionMaskIndex);
+        int questionMaskIndex = path.indexOf(QUESTION_MASK); // 解析跟在URL后面的参数
+        if (questionMaskIndex != -1 && questionMaskIndex != path.length() - 1) {
+            String[] parametersArr = path.substring(questionMaskIndex + 1).split(PARAMETER_BREAK);
+            path = path.substring(0, questionMaskIndex);
             for (String parametersStr : parametersArr) {
                 String[] parameter = parametersStr.split(PARAMETER_VALUE_BREAK);
                 if (parameter.length == 2) {
@@ -74,9 +78,69 @@ public class HttpRequest {
         // 解析请求数据
         int contentLength = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
         if (contentLength > 0 && requestArr.size() > 1) {
-            String contentType = headers.get(HttpHeader.CONTENT_TYPE);
-            parameters.putParam(contentType, requestArr.get(1));
+            parameters.putParam(HttpParameter.DATA, requestArr.get(1));
         }
+    }
+    
+    /**
+     * Request转byte
+     * @return
+     */
+    public byte[] toArray(String route) {
+        List<Byte> buffer = new LinkedList<>();
+        addBytes(buffer, method.getBytes());
+        buffer.add(SPLIT_BREAK);
+        addBytes(buffer, route.getBytes());
+        addBytes(buffer, path.getBytes());
+        
+        byte[] data = (byte[]) parameters.remove(HttpParameter.DATA);
+        if (parameters.size() > 0) {
+            buffer.add(QUESTION_MASK);
+            int index = 0;
+            for (Map.Entry<String, Object> param : parameters.entrySet()) {
+                addBytes(buffer, param.getKey().getBytes());
+                addBytes(buffer, PARAMETER_VALUE_BREAK.getBytes());
+                addBytes(buffer, param.getValue().toString().getBytes());
+                if (++index < parameters.size()) addBytes(buffer, PARAMETER_BREAK.getBytes());
+            }
+        }
+        buffer.add(SPLIT_BREAK);
+        addBytes(buffer, protocol.getBytes());
+        buffer.add(SPLIT_BREAK);
+        addBytes(buffer, LINE_BREAK);
+        
+        int index = 0;
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            addBytes(buffer, header.getKey().getBytes());
+            buffer.add(HEADER_BREAK);
+            addBytes(buffer, header.getValue().getBytes());
+            if (++index < headers.size()) addBytes(buffer, LINE_BREAK);
+        }
+        addBytes(buffer, LINE_BREAK);
+        if (data != null) addBytes(buffer, data);
+        byte[] res = new byte[buffer.size()];
+        int i = 0;
+        for (Byte b : buffer) {
+            res[i++] = b;
+        }
+        return res;
+    }
+    
+    public HttpURLConnection toHttp(String remoteURL) {
+        HttpURLConnection conn = null;
+        try {
+            if (!remoteURL.endsWith("/")) remoteURL += "/";
+            String urlStr = remoteURL + path.substring(1);
+            log.info("HTTP {}", urlStr);
+            conn = HttpUtils.getConn(urlStr, method, headers, parameters);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+        return conn;
+    }
+    
+    private void addBytes(List<Byte> buffer, byte... bs) {
+        for (byte b : bs) buffer.add(b);
     }
     
     public String getProtocol() {
@@ -95,12 +159,12 @@ public class HttpRequest {
         this.method = method;
     }
 
-    public String getRoute() {
-        return route;
+    public String getPath() {
+        return path;
     }
 
-    public void setRoute(String route) {
-        this.route = route;
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public HttpHeader getHeaders() {

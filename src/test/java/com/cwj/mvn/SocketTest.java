@@ -59,7 +59,7 @@ public class SocketTest {
                     HttpRequest httpRequest = new HttpRequest(buffer);
                     System.out.println("Method: " + httpRequest.getMethod());
                     System.out.println("Protocol: " + httpRequest.getProtocol());
-                    System.out.println("Route: " + httpRequest.getRoute());
+                    System.out.println("Route: " + httpRequest.getPath());
                     System.out.println("Headers: " + httpRequest.getHeaders());
                     System.out.println("Parameters: " + httpRequest.getParameters());
                 } catch (Exception e) {

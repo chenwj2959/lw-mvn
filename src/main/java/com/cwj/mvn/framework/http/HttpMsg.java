@@ -1,18 +1,21 @@
 package com.cwj.mvn.framework.http;
 
 public enum HttpMsg {
-    OK(200);
+    OK(200, "OK"),
+    NOT_FOUND(404, "Not Found");
 
     private int httpCode;
-    HttpMsg(int httpCode) {
+    private String httpMsg;
+    HttpMsg(int httpCode, String httpMsg) {
         this.httpCode = httpCode;
+        this.httpMsg = httpMsg;
     }
     public int code() {
         return this.httpCode;
     }
     
     public String msg() {
-        return this.toString();
+        return this.httpMsg;
     }
     
     public static HttpMsg getHttpMsg(int code, String msg) {

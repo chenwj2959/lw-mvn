@@ -40,6 +40,8 @@ public class HttpParameter extends HashMap<String, Object> {
             return String.valueOf(get(DATA)).getBytes();
         } else if (HttpHeader.TYPE_JSON.equals(contentType)) {
             return JSONObject.toJSONBytes(this);
+        } else if (HttpHeader.TYPE_HTML.equals(contentType)) {
+            return get(DATA).toString().getBytes();
         } else {
             // XXX 完善content-type
             return (byte[]) get(DATA);

@@ -34,7 +34,7 @@ public abstract class AbstractClientService<T> extends BaseRunnable {
                 }
                 beforeHandle(message);
                 if (!handlers.doHanlde(message)) {
-                    log.error("Do handle message has error, message = {}", message.toString());
+                    log.error("Do handle message has error, message = {}", message);
                 }
             } catch (SocketException e) {
                 log.error(e.getMessage(), e);

@@ -42,7 +42,7 @@ public abstract class AbstractClientSocket<T> {
     private byte[] cache; // 未解析的数据缓存
     protected boolean debug;
 
-    protected AbstractClientSocket(ClientBuilder builder) throws IOException {
+    protected AbstractClientSocket(ClientBuilder builder) {
         Objects.requireNonNull(builder);
         this.TAG = Objects.requireNonNull(builder.tag);
         this.port = Objects.requireNonNull(builder.port);
@@ -50,7 +50,6 @@ public abstract class AbstractClientSocket<T> {
         this.socket = builder.socket;
         this.connectTimeout = builder.connectTimeout;
         this.debug = builder.debug;
-        if (socket == null) connection();
         this.lock = new ReentrantLock();
         this.closed = false;
     }

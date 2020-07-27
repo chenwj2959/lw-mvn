@@ -1,20 +1,21 @@
 package com.cwj.mvn.core;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
+import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.framework.Settings;
-import com.cwj.mvn.framework.ThreadPool;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
@@ -24,6 +25,7 @@ import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperation;
 import com.cwj.mvn.utils.DateUtils;
 import com.cwj.mvn.utils.FileUtils;
+import com.cwj.mvn.utils.HttpUtils;
 
 public class MClientOperation extends AbstractOperation<byte[]> {
     
@@ -36,70 +38,68 @@ public class MClientOperation extends AbstractOperation<byte[]> {
     public Boolean handle(byte[] message, HashMap<String, Object> paramMap, AbstractClientSocket<byte[]> client) {
         try {
             HttpRequest request = new HttpRequest(message);
-            String route = request.getRoute(); 
-            String contentType = getContentType(route);
-            File resource = new File(LOCAL_REPOSITORY + route);
-            if (returnFileIfExists(resource, contentType, request, client)) return true; // 本地已有，直接返回
-            
-            // 本地没有
-            // 检测是否正在下载
-            boolean downloaded = false;
-            while (ThreadPool.contains(route)) { // 正在下载则等待
-                downloaded = true;
-                TimeUnit.SECONDS.sleep(1);
-            }
-            if (downloaded) { // 下载完成后返回
-                if (!returnFileIfExists(resource, contentType, request, client)) {
-                    // TODO 从远程仓库下载失败
-                }
-                return true;
-            }
-            
+            String path = request.getPath();
+            String protocol = request.getProtocol();
+            String contentType = getContentType(path);
+            File resource = new File(LOCAL_REPOSITORY + path);
+            if (returnFileIfExists(resource, contentType, protocol, client)) return true; // 本地已有，直接返回
             // 从远程仓库下载
-            try {
-                URI url = new URI(REMOTE_URL);
-                MClientSocket mClient = new MClientSocket.ClientBuilder()
-                        .ip(url.getHost())
-                        .port(url.getPort())
-                        .connectTimeout(5000)
-                        .tag(route)
-                        .debug(false)
-                        .build(MClientSocket.class);
-                mClient.connection();
-                mClient.send(message);
-                byte[] buffer = mClient.receive();
-                HttpResponse resp = HttpResponse.parse(buffer);
-                HttpMsg httpMsg = resp.getHttpMsg();
-                if (httpMsg.code() == 200) {
-                    HttpHeader headers = resp.getHeaders();
-                    int length = Integer.parseInt(headers.getOrDefault(HttpHeader.CONTENT_LENGTH, "0"));
-                    if (length == 0) { // TODO 没有文件返回
-                        return true;
-                    }
-                    HttpParameter parameters = resp.getParameters();
-                    byte[] jarBuffer = parameters == null ? mClient.receive(length) : parameters.getData(contentType);
-                    if (FileUtils.write(jarBuffer, resource)) {
-                        returnFileIfExists(resource, contentType, request, client);
-                    } else {
-                        // 文件保存失败处理
-                        returnByByte(jarBuffer, resp.getHeaders().get(HttpHeader.CONTENT_TYPE), request, client);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Return from remote failed!", e);
-            }
-        } catch (InterruptedException e) {
+            HttpURLConnection conn = request.toHttp(REMOTE_URL);
+            return returnByRemote(conn, request, resource, client);
+        } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
         return true;
     }
     
+    private boolean returnByRemote(HttpURLConnection conn, HttpRequest request, File resource, AbstractClientSocket<byte[]> client) {
+        try {
+            conn.connect();
+            int respCode = conn.getResponseCode();
+            log.info("HTTP CODE {} {}", respCode, conn.getResponseMessage());
+            String protocol = request.getProtocol();
+            if (respCode == HttpURLConnection.HTTP_OK) {
+                int length = conn.getHeaderFieldInt(HttpHeader.CONTENT_LENGTH, 0);
+                if (length == 0) { // TODO 没有文件返回
+                    returnNotFound(protocol, client);
+                    return false;
+                }
+                InputStream is = conn.getInputStream();
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    byte[] buffer = new byte[4096];
+                    int ans;
+                    while ((ans = is.read(buffer)) != -1) baos.write(buffer, 0, ans);
+                    String respType = conn.getHeaderField(HttpHeader.CONTENT_TYPE);
+                    if (FileUtils.write(baos.toByteArray(), resource)) {
+                        return returnFileIfExists(resource, respType, protocol, client);
+                    } else {
+                        // 文件保存失败处理
+                        return returnByByte(baos.toByteArray(), respType, protocol, client);
+                    }
+                }
+            } else {
+                // 403 aliyun镜像重定向, 301 重定向code
+                String redirectUrl = conn.getHeaderField(HttpHeader.LOCATION);
+                if (redirectUrl == null) { // TODO 没有重定向连接
+                    returnNotFound(protocol, client);
+                    return false;
+                }
+                log.info("Redire {}", redirectUrl);
+                HttpURLConnection redireConn = HttpUtils.getConn(redirectUrl, request.getMethod(), request.getHeaders(), request.getParameters());
+                return returnByRemote(redireConn, request, resource, client);
+            }
+        } catch (Exception e) {
+            log.error("Return from remote failed!", e);
+            return false;
+        }
+    }
+    
     /**
      * 如果文件存在则返回
      */
-    private boolean returnFileIfExists(File file, String contentType, HttpRequest request, AbstractClientSocket<byte[]> client) {
+    private boolean returnFileIfExists(File file, String contentType,  String protocol, AbstractClientSocket<byte[]> client) {
         if (file.exists()) { // 服务器已有，直接返回
-            HttpResponse resp = new HttpResponse(request.getProtocol(), HttpMsg.OK);
+            HttpResponse resp = new HttpResponse(protocol, HttpMsg.OK);
             HttpHeader headers = resp.getHeaders();
             headers.put(HttpHeader.CONTENT_TYPE, contentType);
             String etag = "\"" + readSHA1Str(file) + "\"";
@@ -131,13 +131,9 @@ public class MClientOperation extends AbstractOperation<byte[]> {
     
     /**
      * 直接返回remote仓库下载的byte
-     * @param jarBuffer
-     * @param request
-     * @param client
-     * @return
      */
-    private boolean returnByByte(byte[] jarBuffer, String contentType, HttpRequest request, AbstractClientSocket<byte[]> client) {
-        HttpResponse resp = new HttpResponse(request.getProtocol(), HttpMsg.OK);
+    private boolean returnByByte(byte[] jarBuffer, String contentType, String protocol, AbstractClientSocket<byte[]> client) {
+        HttpResponse resp = new HttpResponse(protocol, HttpMsg.OK);
         HttpHeader headers = resp.getHeaders();
         String etag = "\"" + getSha1ByByte(jarBuffer) + "\"";
         if (etag != null) headers.put(HttpHeader.ETAG, etag);
@@ -151,6 +147,27 @@ public class MClientOperation extends AbstractOperation<byte[]> {
         parameters.put(HttpParameter.DATA, jarBuffer);
         resp.send(client);
         return true;
+    }
+    
+    private void returnNotFound(String protocol, AbstractClientSocket<byte[]> client) {
+        HttpResponse resp = new HttpResponse(protocol, HttpMsg.NOT_FOUND);
+        HttpHeader headers = new HttpHeader();
+        headers.put(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE);
+        headers.put(HttpHeader.LAST_MODIFIED, Constant.LAST_MODIFIED);
+        headers.put(HttpHeader.ETAG, getSha1ByByte(Constant.HTML_404.getBytes()));
+        headers.put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_HTML);
+//        headers.put("x-amz-error-code", "NoSuchKey");
+//        headers.put("x-amz-error-message", "The specified key does not exist.");
+//        headers.put("x-amz-error-detail-Key", path);
+//        headers.put("X-Served-By", "cache-bwi5149-BWI, cache-sea4425-SEA");
+//        headers.put("X-Cache", "MISS, HIT");
+//        headers.put("X-Cache-Hits", "0, 1");
+//        headers.put("X-Timer", "S1595850655.089785,VS0,VE1");
+//        headers.put("Age", "808");
+        resp.setHeaders(headers);
+        HttpParameter param = new HttpParameter();
+        param.put(HttpParameter.DATA, Constant.HTML_404);
+        resp.send(client);
     }
     
     /**
