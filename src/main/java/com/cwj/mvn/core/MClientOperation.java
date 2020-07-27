@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +41,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             String protocol = request.getProtocol();
             String contentType = getContentType(path);
             File resource = new File(LOCAL_REPOSITORY + path);
-            if (returnFileIfExists(resource, contentType, protocol, client)) return true; // 本地已有，直接返回
+            if (returnFileIfExists(resource, contentType, protocol, client)) return true; // 本地已有, 直接返回
             // 从远程仓库下载
             HttpURLConnection conn = request.toHttp(REMOTE_URL);
             return returnByRemote(conn, request, resource, client);
@@ -60,7 +59,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             String protocol = request.getProtocol();
             if (respCode == HttpURLConnection.HTTP_OK) {
                 int length = conn.getHeaderFieldInt(HttpHeader.CONTENT_LENGTH, 0);
-                if (length == 0) { // TODO 没有文件返回
+                if (length == 0) { // 没有文件返回
                     returnNotFound(protocol, client);
                     return false;
                 }
@@ -80,7 +79,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             } else {
                 // 403 aliyun镜像重定向, 301 重定向code
                 String redirectUrl = conn.getHeaderField(HttpHeader.LOCATION);
-                if (redirectUrl == null) { // TODO 没有重定向连接
+                if (redirectUrl == null) { // 没有重定向连接
                     returnNotFound(protocol, client);
                     return false;
                 }
@@ -183,20 +182,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
                 log.error("Read sha1 file failed!", e);
             }
         }
-        String sha1 = getSha1ByFile(jarFile);
-        if (sha1 == null) return sha1;
-        try {
-            respSHAFile.createNewFile();
-            try (FileOutputStream fos = new FileOutputStream(respSHAFile)) {
-                fos.write(sha1.getBytes());
-            } catch (Exception e) {
-                log.error("Write sha1 file failed", e);
-                respSHAFile.delete();
-            }
-        } catch (IOException e) {
-            log.error("Create sha1 file failed", e);
-        }
-        return sha1;
+        return getSha1ByFile(jarFile);
     }
     
     /**
