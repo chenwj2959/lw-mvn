@@ -1,15 +1,10 @@
 package com.cwj.mvn.core;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -21,23 +16,23 @@ import com.cwj.mvn.framework.http.bean.HttpParameter;
 import com.cwj.mvn.framework.http.bean.HttpRequest;
 import com.cwj.mvn.framework.http.bean.HttpResponse;
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
-import com.cwj.mvn.framework.socket.AbstractOperation;
 import com.cwj.mvn.utils.DateUtils;
 import com.cwj.mvn.utils.FileUtils;
 import com.cwj.mvn.utils.HttpUtils;
 
-public class MClientOperation extends AbstractOperation<byte[]> {
+public class MClientFileOperation extends MClientOperation {
     
-    private static final String LOCAL_REPOSITORY = Settings.getSetting(Settings.LOCAL_REPOSITORY);
     private static final String REMOTE_URL = Settings.getSetting(Settings.REMOTE_URL);
-    
-    private static final String SHA_FILE_SUFFIX = ".sha1";
 
     @Override
     public Boolean handle(byte[] message, HashMap<String, Object> paramMap, AbstractClientSocket<byte[]> client) {
         try {
             HttpRequest request = new HttpRequest(message);
             String path = request.getPath();
+            if (isHtmlReq(path)) {
+                paramMap.put(HTTP_REQUEST, request);
+                return nextHandler(message, paramMap, client);
+            }
             String protocol = request.getProtocol();
             String contentType = getContentType(path);
             File resource = new File(LOCAL_REPOSITORY + path);
@@ -60,7 +55,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
             if (respCode == HttpURLConnection.HTTP_OK) {
                 int length = conn.getHeaderFieldInt(HttpHeader.CONTENT_LENGTH, 0);
                 if (length == 0) { // 没有文件返回
-                    returnNotFound(protocol, client);
+                    returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
                     return false;
                 }
                 InputStream is = conn.getInputStream();
@@ -80,7 +75,7 @@ public class MClientOperation extends AbstractOperation<byte[]> {
                 // 403 aliyun镜像重定向, 301 重定向code
                 String redirectUrl = conn.getHeaderField(HttpHeader.LOCATION);
                 if (redirectUrl == null) { // 没有重定向连接
-                    returnNotFound(protocol, client);
+                    returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
                     return false;
                 }
                 log.info("Redire {}", redirectUrl);
@@ -148,95 +143,17 @@ public class MClientOperation extends AbstractOperation<byte[]> {
         return true;
     }
     
-    private void returnNotFound(String protocol, AbstractClientSocket<byte[]> client) {
-        HttpResponse resp = new HttpResponse(protocol, HttpMsg.NOT_FOUND);
-        HttpHeader headers = new HttpHeader();
-        headers.put(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE);
-        headers.put(HttpHeader.LAST_MODIFIED, Constant.LAST_MODIFIED);
-        headers.put(HttpHeader.ETAG, getSha1ByByte(Constant.HTML_404.getBytes()));
-        headers.put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_HTML);
-//        headers.put("x-amz-error-code", "NoSuchKey");
-//        headers.put("x-amz-error-message", "The specified key does not exist.");
-//        headers.put("x-amz-error-detail-Key", path);
-//        headers.put("X-Served-By", "cache-bwi5149-BWI, cache-sea4425-SEA");
-//        headers.put("X-Cache", "MISS, HIT");
-//        headers.put("X-Cache-Hits", "0, 1");
-//        headers.put("X-Timer", "S1595850655.089785,VS0,VE1");
-//        headers.put("Age", "808");
-        resp.setHeaders(headers);
-        HttpParameter param = new HttpParameter();
-        param.put(HttpParameter.DATA, Constant.HTML_404);
-        resp.send(client);
-    }
-    
-    /**
-     * 读取*.jar.sha1文件中的内容
-     */
-    private String readSHA1Str(File jarFile) {
-        String respFilePath = jarFile.getAbsolutePath();
-        File respSHAFile = new File(respFilePath + SHA_FILE_SUFFIX);
-        if (respSHAFile.exists()) {
-            try (FileReader fr = new FileReader(respSHAFile); BufferedReader br = new BufferedReader(fr)) {
-                return br.readLine();
-            } catch (Exception e) {
-                log.error("Read sha1 file failed!", e);
-            }
-        }
-        return getSha1ByFile(jarFile);
-    }
-    
-    /**
-     * 根据jar包输入流获取该文件的sha1码
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     */
-    private String getSha1ByFile(File file) {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-            byte[] data = new byte[1024];
-            int read;
-            while ((read = fis.read(data)) != -1) {
-                sha1.update(data, 0, read);
-            }
-            byte[] hashBytes = sha1.digest();
-            StringBuffer sb = new StringBuffer();
-            for (int i = 0; i < hashBytes.length; i++) {
-                sb.append(Integer.toString((hashBytes[i] & 0xff) + 0x100, 16).substring(1));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            return null;
-        }
-    }
-    
-    /**
-     * 根据jar包二进制输入流获取该文件的sha1码
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     */
-    private String getSha1ByByte(byte[] data) {
-        try {
-            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-            sha1.update(data, 0, data.length);
-            byte[] hashBytes = sha1.digest();
-            StringBuffer sb = new StringBuffer();
-            for (int i = 0; i < hashBytes.length; i++) {
-                sb.append(Integer.toString((hashBytes[i] & 0xff) + 0x100, 16).substring(1));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            return null;
-        }
-    }
-    
     /**
      * 根据route获取对应的contentType
      */
     private String getContentType(String route) {
         return route.endsWith(".jar") ? HttpHeader.TYPE_JAVA_ARCHIVE : HttpHeader.TYPE_XML;
+    }
+    
+    /**
+     * 是否为html请求
+     */
+    private boolean isHtmlReq(String route) {
+        return !(route.endsWith(".jar") || route.endsWith(SHA_FILE_SUFFIX) || route.endsWith(".pom"));
     }
 }

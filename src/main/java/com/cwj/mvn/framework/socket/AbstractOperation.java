@@ -13,4 +13,18 @@ public abstract class AbstractOperation<T> extends AbstractHandler<T, Boolean> {
     }
     
     public abstract Boolean handle(T message, HashMap<String, Object> paramMap, AbstractClientSocket<T> client);
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public Boolean nextHandler(T message, HashMap<String, Object> paramMap) throws Exception {
+        return nextHandler(message, paramMap, (AbstractClientSocket<T>) paramMap.get(AbstractOperationChain.CLIENT));
+    }
+    
+    public Boolean nextHandler(T message, HashMap<String, Object> paramMap, AbstractClientSocket<T> client) throws Exception {
+        if (nextHandler == null) {
+            log.error("Cannot handle message");
+            return null;
+        }
+        else return nextHandler.handle(message, paramMap);
+    }
 }

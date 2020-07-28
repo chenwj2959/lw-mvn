@@ -9,7 +9,7 @@ public abstract class AbstractHandler<T, K> {
     
     protected static final Logger log = LoggerFactory.getLogger(AbstractHandler.class);
     
-    private AbstractHandler<T, K> nextHandler;
+    protected AbstractHandler<T, K> nextHandler;
 
     public AbstractHandler<T, K> getNextHandler() {
         return nextHandler;

@@ -31,7 +31,9 @@ public class MSocketServer extends AbstractSocketService<byte[]> {
     @Override
     public AbstractClientService<byte[]> createClientService(AbstractClientSocket<byte[]> client) {
         try {
-            AbstractOperationChain<byte[]> handlers = new AbstractOperationChain<byte[]>(client, MClientOperation.class);
+            AbstractOperationChain<byte[]> handlers = new AbstractOperationChain<byte[]>(client, 
+                    MClientFileOperation.class,
+                    MClientHtmlOperation.class);
             return new MClientService(handlers);
         } catch (Exception e) {
             log.error("Create client service failed!", e);

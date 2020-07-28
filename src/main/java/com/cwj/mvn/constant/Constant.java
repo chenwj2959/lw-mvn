@@ -26,4 +26,30 @@ public class Constant {
             "</body>\n" + 
             "\n" + 
             "</html>";
+    public static final String HTML_FILES = "<!DOCTYPE html>\n" + 
+            "<html>\n" + 
+            "<head>\n" + 
+            "    <title>Central Repository: ant-contrib</title>\n" + 
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" + 
+            "    <style>\n" + 
+            "body {\n" + 
+            "    background: #fff;\n" + 
+            "}\n" + 
+            "    </style>\n" + 
+            "</head>\n" + 
+            "\n" + 
+            "<body>\n" + 
+            "    <header>\n" + 
+            "        <h1>%s</h1>\n" + 
+            "    </header>\n" + 
+            "    <hr/>\n" + 
+            "    <main>\n" + 
+            "        <pre id=\"contents\">\n" + 
+            "<a href=\"../\">../</a>\n%s" + 
+            "        </pre>\n" + 
+            "    </main>\n" + 
+            "    <hr/>\n" + 
+            "</body>\n" + 
+            "\n" + 
+            "</html>";
 }
