@@ -5,4 +5,5 @@
 1. socket解析http/https - 完成
 2. 下载/缓存jar - 完成
 3. 上传jar命令
-4. 网页浏览jar
+4. 网页浏览jar -ing
+5. 访问加密

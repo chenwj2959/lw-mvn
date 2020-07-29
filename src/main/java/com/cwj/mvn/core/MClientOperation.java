@@ -9,7 +9,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import com.cwj.mvn.constant.Constant;
-import com.cwj.mvn.framework.Settings;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
@@ -19,7 +18,6 @@ import com.cwj.mvn.framework.socket.AbstractOperation;
 
 public abstract class MClientOperation extends AbstractOperation<byte[]> {
     
-    protected static final String LOCAL_REPOSITORY = Settings.getSetting(Settings.LOCAL_REPOSITORY);
     protected static final String SHA_FILE_SUFFIX = ".sha1";
     
     protected static final String HTTP_REQUEST = "HttpRequest";
@@ -29,8 +27,8 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
         HttpHeader headers = new HttpHeader();
         headers.put(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE);
         headers.put(HttpHeader.LAST_MODIFIED, Constant.LAST_MODIFIED);
-        headers.put(HttpHeader.ETAG, getSha1ByByte(html.getBytes()));
         headers.put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_HTML);
+        headers.put(HttpHeader.ETAG, getSha1ByByte(html.getBytes()));
         resp.setHeaders(headers);
         HttpParameter param = new HttpParameter();
         param.put(HttpParameter.DATA, html);

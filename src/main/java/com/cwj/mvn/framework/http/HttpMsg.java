@@ -2,6 +2,7 @@ package com.cwj.mvn.framework.http;
 
 public enum HttpMsg {
     OK(200, "OK"),
+    MOVE_PERMANENTLY(301, "Moved Permanently"),
     NOT_FOUND(404, "Not Found");
 
     private int httpCode;

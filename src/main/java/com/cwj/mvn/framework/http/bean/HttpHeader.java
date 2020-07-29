@@ -31,6 +31,7 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String TYPE_JSON = "application/json";
     public static final String TYPE_XML = "application/xml";
     public static final String TYPE_JAVA_ARCHIVE = "application/java-archive"; // download jar
+    public static final String TYPE_ICON = "image/x-icon";
     
     public HttpHeader() {
         put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_JSON);

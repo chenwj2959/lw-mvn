@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.HashMap;
 
 import com.cwj.mvn.constant.Constant;
-import com.cwj.mvn.framework.Settings;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
@@ -22,8 +21,6 @@ import com.cwj.mvn.utils.HttpUtils;
 
 public class MClientFileOperation extends MClientOperation {
     
-    private static final String REMOTE_URL = Settings.getSetting(Settings.REMOTE_URL);
-
     @Override
     public Boolean handle(byte[] message, HashMap<String, Object> paramMap, AbstractClientSocket<byte[]> client) {
         try {
@@ -35,10 +32,10 @@ public class MClientFileOperation extends MClientOperation {
             }
             String protocol = request.getProtocol();
             String contentType = getContentType(path);
-            File resource = new File(LOCAL_REPOSITORY + path);
+            File resource = new File(Constant.LOCAL_REPOSITORY + path);
             if (returnFileIfExists(resource, contentType, protocol, client)) return true; // 本地已有, 直接返回
             // 从远程仓库下载
-            HttpURLConnection conn = request.toHttp(REMOTE_URL);
+            HttpURLConnection conn = request.toHttp(Constant.REMOTE_URL);
             return returnByRemote(conn, request, resource, client);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -154,6 +151,6 @@ public class MClientFileOperation extends MClientOperation {
      * 是否为html请求
      */
     private boolean isHtmlReq(String route) {
-        return !(route.endsWith(".jar") || route.endsWith(SHA_FILE_SUFFIX) || route.endsWith(".pom"));
+        return !(route.contains(".jar") || route.contains(SHA_FILE_SUFFIX) || route.contains(".pom"));
     }
 }

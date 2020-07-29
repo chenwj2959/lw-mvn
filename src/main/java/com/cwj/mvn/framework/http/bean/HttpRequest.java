@@ -8,14 +8,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cwj.mvn.framework.Settings;
+import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.utils.ByteUtils;
 import com.cwj.mvn.utils.HttpUtils;
 
 public class HttpRequest {
     
     private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
-    private static final String LOCAL_URL_SUFFIX = Settings.getSetting(Settings.LOCAL_URL_SUFFIX); // 从配置文件中获取URL后缀
     
     private static final byte[] CHUNK_BREAK = {13, 10, 13, 10}; // CR LF CR LF
     private static final byte[] LINE_BREAK = {13, 10}; // CR LF
@@ -28,6 +27,7 @@ public class HttpRequest {
     private String protocol; // HTTP/1.0 or HTTP/1.1
     private String method; // support GET and POST
     private String path; // 具体文件路径 
+    private String route; // 完整的URL
     private HttpHeader headers;
     private HttpParameter parameters;
 
@@ -47,15 +47,13 @@ public class HttpRequest {
         parameters = new HttpParameter();
         
         method = new String(urlArr.get(0));
-        path = new String(urlArr.get(1));
+        route = new String(urlArr.get(1));
         protocol = new String(urlArr.get(2));
-        log.info("Receive {} {} {}", method, path, protocol);
+        log.info("Receive {} {} {}", method, route, protocol);
         
         // ---- 路径要减去默认部分
-        int suffixIndex = path.indexOf(LOCAL_URL_SUFFIX);
-        if (suffixIndex == 0) {
-            path = path.substring(LOCAL_URL_SUFFIX.length());
-        }
+        int suffixIndex = route.indexOf(Constant.LOCAL_URL_SUFFIX);
+        path = suffixIndex == 0 ? route.substring(Constant.LOCAL_URL_SUFFIX.length()) : route;
         
         int questionMaskIndex = path.indexOf(QUESTION_MASK); // 解析跟在URL后面的参数
         if (questionMaskIndex != -1 && questionMaskIndex != path.length() - 1) {
@@ -142,44 +140,28 @@ public class HttpRequest {
     private void addBytes(List<Byte> buffer, byte... bs) {
         for (byte b : bs) buffer.add(b);
     }
-    
+
     public String getProtocol() {
         return protocol;
-    }
-
-    public void setProtocol(String protocol) {
-        this.protocol = protocol;
     }
 
     public String getMethod() {
         return method;
     }
 
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
     public String getPath() {
         return path;
     }
 
-    public void setPath(String path) {
-        this.path = path;
+    public String getRoute() {
+        return route;
     }
 
     public HttpHeader getHeaders() {
         return headers;
     }
 
-    public void setHeaders(HttpHeader headers) {
-        this.headers = headers;
-    }
-
     public HttpParameter getParameters() {
         return parameters;
-    }
-
-    public void setParameters(HttpParameter parameters) {
-        this.parameters = parameters;
     }
 }

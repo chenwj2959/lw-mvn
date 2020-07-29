@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSONObject;
+import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.core.MSocketServer;
 
 public class ThreadPool {
@@ -156,8 +157,7 @@ public class ThreadPool {
             return false;
         }
         try {
-            int port = Integer.parseInt(Settings.getSetting(Settings.LOCAL_PORT));
-            MSocketServer mSocketServer = new MSocketServer(port);
+            MSocketServer mSocketServer = new MSocketServer(Constant.LOCAL_PORT);
             putServer(mSocketServer);
             return true;
         } catch (Exception e) {

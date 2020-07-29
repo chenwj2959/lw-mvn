@@ -42,6 +42,9 @@ public class HttpParameter extends HashMap<String, Object> {
             return JSONObject.toJSONBytes(this);
         } else if (HttpHeader.TYPE_HTML.equals(contentType)) {
             return get(DATA).toString().getBytes();
+        } else if (HttpHeader.TYPE_ICON.equals(contentType)) {
+            // TODO 图片传输
+            return (byte[]) get(DATA);
         } else {
             // XXX 完善content-type
             return (byte[]) get(DATA);
