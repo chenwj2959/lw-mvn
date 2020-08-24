@@ -5,15 +5,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import com.cwj.mvn.framework.http.bean.HttpParameter;
 
 public class HttpUtils {
 
     public static HttpURLConnection getConn(String urlStr, String method, Map<String, String> headers, Map<String, Object> parameters) throws Exception {
         URL url = new URL(urlStr);
-        HttpURLConnection conn = (HttpsURLConnection) url.openConnection();
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod(method);
         conn.setUseCaches(true);
         conn.setInstanceFollowRedirects(false);
