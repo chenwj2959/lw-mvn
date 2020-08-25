@@ -99,4 +99,34 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
             return null;
         }
     }
+    
+    /**
+     * 根据jar包输入流获取该文件的MD5值
+     * @param file
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
+    protected String getMD5ByFile(File file) {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+            byte[] data = new byte[1024];
+            int read;
+            while ((read = fis.read(data)) != -1) {
+                messageDigest.update(data, 0, read);
+            }
+            byte[] byteBuffer = messageDigest.digest();
+            StringBuffer strHexString = new StringBuffer();
+            for (int i = 0; i < byteBuffer.length; i++) {
+                String hex = Integer.toHexString(0xff & byteBuffer[i]);
+                if (hex.length() == 1) {
+                    strHexString.append('0');
+                }
+                strHexString.append(hex);
+            }
+            return strHexString.toString();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return null;
+        }
+    }
 }

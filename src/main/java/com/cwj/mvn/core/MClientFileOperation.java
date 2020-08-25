@@ -18,6 +18,7 @@ import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.utils.DateUtils;
 import com.cwj.mvn.utils.FileUtils;
 import com.cwj.mvn.utils.HttpUtils;
+import com.cwj.mvn.utils.StringUtils;
 
 public class MClientFileOperation extends MClientOperation {
     
@@ -33,7 +34,7 @@ public class MClientFileOperation extends MClientOperation {
             String protocol = request.getProtocol();
             String contentType = getContentType(path);
             File resource = new File(Constant.LOCAL_REPOSITORY + path);
-            if (returnFileIfExists(resource, contentType, protocol, client)) return true; // 本地已有, 直接返回
+            if (returnFileIfExists(resource, contentType, protocol, client, null, null)) return true; // 本地已有, 直接返回
             // 从远程仓库下载
             HttpURLConnection conn = request.toHttp(Constant.REMOTE_URL);
             return returnByRemote(conn, request, resource, client);
@@ -62,7 +63,9 @@ public class MClientFileOperation extends MClientOperation {
                     while ((ans = is.read(buffer)) != -1) baos.write(buffer, 0, ans);
                     String respType = conn.getHeaderField(HttpHeader.CONTENT_TYPE);
                     if (FileUtils.write(baos.toByteArray(), resource)) {
-                        return returnFileIfExists(resource, respType, protocol, client);
+                        String etag = conn.getHeaderField(HttpHeader.ETAG);
+                        String lastModify = conn.getHeaderField(HttpHeader.LAST_MODIFIED);
+                        return returnFileIfExists(resource, respType, protocol, client, etag, lastModify);
                     } else {
                         // 文件保存失败处理
                         return returnByByte(baos.toByteArray(), respType, protocol, client);
@@ -88,14 +91,20 @@ public class MClientFileOperation extends MClientOperation {
     /**
      * 如果文件存在则返回
      */
-    private boolean returnFileIfExists(File file, String contentType,  String protocol, AbstractClientSocket<byte[]> client) {
+    private boolean returnFileIfExists(File file, String contentType, String protocol, AbstractClientSocket<byte[]> client, String etag, String lastModify) {
         if (file.exists()) { // 服务器已有，直接返回
             HttpResponse resp = new HttpResponse(protocol, HttpMsg.OK);
             HttpHeader headers = resp.getHeaders();
             headers.put(HttpHeader.CONTENT_TYPE, contentType);
-            String etag = "\"" + readSHA1Str(file) + "\"";
-            if (etag != null) headers.put(HttpHeader.ETAG, etag);
-            headers.put(HttpHeader.LAST_MODIFIED, DateUtils.dateToString(file.lastModified(), DateUtils.EdMyHms_GMT));
+            if (StringUtils.isBlank(etag)) etag = "\"" + readSHA1Str(file) + "\"";
+            if (!StringUtils.isBlank(etag)) {
+                headers.put(HttpHeader.ETAG, etag);
+                headers.put(HttpHeader.X_CHECKSUM_SHA, etag);
+            }
+            String md5 = getMD5ByFile(file);
+            if (!StringUtils.isBlank(md5)) headers.put(HttpHeader.X_CHECKSUM_MD5, md5);
+            if (StringUtils.isBlank(lastModify)) lastModify = DateUtils.dateToString(file.lastModified(), DateUtils.EdMyHms_GMT);
+            headers.put(HttpHeader.LAST_MODIFIED, lastModify);
             try (FileInputStream fis = new FileInputStream(file)) {
                 HttpParameter parameters = resp.getParameters();
                 if (parameters == null) {

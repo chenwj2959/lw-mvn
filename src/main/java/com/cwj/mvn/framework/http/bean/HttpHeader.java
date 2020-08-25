@@ -20,6 +20,9 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String LOCATION = "Location";
     public static final String CONNECTION = "Connection";
     
+    public static final String X_CHECKSUM_SHA = "X-Checksum-SHA";
+    public static final String X_CHECKSUM_MD5 = "X-Checksum-MD5";
+    
     // HTTP header value
     public static final String KEEP_ALIVE = "keep-alive";
     
