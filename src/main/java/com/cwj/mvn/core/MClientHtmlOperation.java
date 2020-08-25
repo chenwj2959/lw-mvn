@@ -18,7 +18,8 @@ public class MClientHtmlOperation extends MClientOperation {
         HttpRequest request = (HttpRequest) paramMap.get(HTTP_REQUEST);
         String route = request.getRoute();
         String protocol = request.getProtocol();
-        if (StringUtils.isBlank(route) || route.equals("/")) { // 重定向到主页
+        String path = request.getPath();
+        if (StringUtils.isBlank(route) || StringUtils.isBlank(path) || route.equals("/")) { // 重定向到主页
             HttpResponse resp = new HttpResponse(protocol, HttpMsg.MOVE_PERMANENTLY);
             HttpHeader headers = new HttpHeader();
             headers.put(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE);
@@ -34,7 +35,6 @@ public class MClientHtmlOperation extends MClientOperation {
             return true;
         }
         
-        String path = request.getPath();
         File root = new File(Constant.LOCAL_REPOSITORY + path);
         if (!root.exists()) {
             returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
@@ -48,17 +48,24 @@ public class MClientHtmlOperation extends MClientOperation {
         if (childes != null) {
             for (File child : childes) {
                 String fileName = child.getName();
+                boolean isFile = isFile(fileName);
+                if (!isFile) fileName += "/";
                 fileStr.append("<a href=\"")
+                    .append(fileName);
+                if (isFile) fileStr.append("\" download=\"").append(child.getName());
+                fileStr.append("\" title=\"")
                     .append(fileName)
-                    .append("/\" title=\"")
+                    .append("\">")
                     .append(fileName)
-                    .append("/\">")
-                    .append(fileName)
-                    .append("/</a>\n");
+                    .append("</a>\n");
             }
         }
         String html = String.format(Constant.HTML_FILES, path, fileStr.toString());
         returnHtml(protocol, html, HttpMsg.OK, client);
         return true;
+    }
+    
+    private boolean isFile(String fileName) {
+        return fileName.endsWith("sha1") || fileName.endsWith("pom") || fileName.endsWith("jar");
     }
 }
