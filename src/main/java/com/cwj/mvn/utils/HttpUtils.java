@@ -5,6 +5,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
+import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
 
 public class HttpUtils {
@@ -16,11 +17,13 @@ public class HttpUtils {
         conn.setUseCaches(true);
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(5000);
-        conn.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
-        conn.setDoInput(true);
         for (Map.Entry<String, String> header : headers.entrySet()) {
             conn.setRequestProperty(header.getKey(), header.getValue());
         }
+        if (StringUtils.isBlank(conn.getRequestProperty(HttpHeader.USER_AGENT))) {
+            conn.setRequestProperty(HttpHeader.USER_AGENT, HttpHeader.DEFAULT_USER_AGENT);
+        }
+        conn.setDoInput(true);
         byte[] data = (byte[]) parameters.get(HttpParameter.DATA);
         if (data != null && data.length > 0) {
             conn.setDoOutput(true);

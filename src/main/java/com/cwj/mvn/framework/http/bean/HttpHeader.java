@@ -19,9 +19,17 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String ETAG = "ETag";
     public static final String LOCATION = "Location";
     public static final String CONNECTION = "Connection";
+    public static final String HOST = "Host";
+    public static final String USER_AGENT = "User-Agent";
     
     public static final String X_CHECKSUM_SHA = "X-Checksum-SHA";
     public static final String X_CHECKSUM_MD5 = "X-Checksum-MD5";
+    
+    // Server
+    public static final String DEFAULT_SERVER = "LW-MAVEN/1.0.0";
+    
+    // Default user-agent
+    public static final String DEFAULT_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)";
     
     // HTTP header value
     public static final String KEEP_ALIVE = "keep-alive";
@@ -39,8 +47,8 @@ public class HttpHeader extends HashMap<String, String> {
     
     public HttpHeader() {
         put(CONNECTION, KEEP_ALIVE);
-        put(CONTENT_TYPE, HttpHeader.TYPE_JSON);
-        put(CONTENT_LENGTH, "0");
-        put(SERVER, "LW-MAVEN/1.0.0");
+//        put(CONTENT_TYPE, HttpHeader.TYPE_JSON);
+//        put(CONTENT_LENGTH, "0");
+        put(SERVER, DEFAULT_SERVER);
     }
 }
