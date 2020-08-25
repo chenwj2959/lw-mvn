@@ -32,15 +32,15 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String TYPE_MULTIPART = "multipart/form-data";
     public static final String TYPE_TEXT_PLAIN = "text/plain";
     public static final String TYPE_JSON = "application/json";
-    public static final String TYPE_XML = "application/xml";
+    public static final String TYPE_APPLICATION_XML = "application/xml";
+    public static final String TYPE_TEXT_XML = "text/xml";
     public static final String TYPE_JAVA_ARCHIVE = "application/java-archive"; // download jar
     public static final String TYPE_ICON = "image/x-icon";
     
     public HttpHeader() {
-        put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_JSON);
-        put(HttpHeader.CONTENT_LENGTH, "0");
-        put(HttpHeader.SERVER, "LW-MAVEN/1.0.0");
-        put(HttpHeader.X_CONTENT_TYPE_OPTIONS, "nosniff");
-        put(HttpHeader.CONTENT_SECURITY_POLICY, "sandbox allow-forms allow-modals allow-popups allow-presentation allow-scripts allow-top-navigation");
+        put(CONNECTION, KEEP_ALIVE);
+        put(CONTENT_TYPE, HttpHeader.TYPE_JSON);
+        put(CONTENT_LENGTH, "0");
+        put(SERVER, "LW-MAVEN/1.0.0");
     }
 }

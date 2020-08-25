@@ -107,9 +107,13 @@ public abstract class AbstractClientSocket<T> {
      */
     public boolean disconnection() {
         try {
-            if (socket != null) socket.close();
+            if (socket != null) {
+                socket.shutdownInput();
+                socket.shutdownOutput();
+                socket.close();
+            }
             socket = null;
-            log.error("Disconnection socket success");
+            log.info("Disconnection socket success");
             return true;
         } catch (Exception e) {
             log.error("Disconnection socket failed, hostname = " + inetAddress.getHostName(), e);
