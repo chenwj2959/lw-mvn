@@ -32,7 +32,7 @@ public abstract class AbstractSocketService<T> extends BaseRunnable {
                 try {
                     log.info("Server socket wait clien connect");
                     Socket client = server.accept();
-                    size++;
+                    if (size++ > 9999) size = 1;
                     log.info("Has new client socket connect!");
                     String tag = createTag();
                     AbstractClientSocket<T> socket = createClientSocket(tag, client);
