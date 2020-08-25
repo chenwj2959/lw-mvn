@@ -26,22 +26,23 @@ public class MClientFileOperation extends MClientOperation {
     public Boolean handle(byte[] message, HashMap<String, Object> paramMap, AbstractClientSocket<byte[]> client) {
         try {
             HttpRequest request = new HttpRequest(message);
-            String path = Constant.LOCAL_REPOSITORY + request.getPath();
+            String path = request.getPath();
             if (isHtmlReq(path)) {
                 paramMap.put(HTTP_REQUEST, request);
                 return nextHandler(message, paramMap, client);
             }
-            if (returnFileIfExists(path, request.getProtocol(), client, null, null)) return true; // 本地已有, 直接返回
+            File file = new File(Constant.LOCAL_REPOSITORY + path);
+            if (returnFileIfExists(file, request.getProtocol(), client, null, null)) return true; // 本地已有, 直接返回
             // 从远程仓库下载
             HttpURLConnection conn = request.toHttp(Constant.REMOTE_URL);
-            return returnByRemote(conn, request, path, client);
+            return returnByRemote(conn, request, file, client);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
         return true;
     }
     
-    private boolean returnByRemote(HttpURLConnection conn, HttpRequest request, String path, AbstractClientSocket<byte[]> client) {
+    private boolean returnByRemote(HttpURLConnection conn, HttpRequest request, File file, AbstractClientSocket<byte[]> client) {
         try {
             conn.connect();
             int respCode = conn.getResponseCode();
@@ -58,17 +59,18 @@ public class MClientFileOperation extends MClientOperation {
                     byte[] buffer = new byte[4096];
                     int ans;
                     while ((ans = is.read(buffer)) != -1) baos.write(buffer, 0, ans);
-                    if (!FileUtils.write(baos.toByteArray(), path)) {
+                    if (!FileUtils.write(baos.toByteArray(), file)) {
                         // 文件保存失败处理
-                        String respType = getContentType(path);
+                        String respType = getContentType(file.getName());
                         return returnByByte(baos.toByteArray(), respType, protocol, client);
                     }
                 }
-                String etag = conn.getHeaderField(HttpHeader.ETAG);
                 String lastModify = conn.getHeaderField(HttpHeader.LAST_MODIFIED);
-                return returnFileIfExists(path, protocol, client, etag, lastModify);
+                file.setLastModified(DateUtils.stringToTimestamp(lastModify, DateUtils.EdMyHms_GMT));
+                String etag = conn.getHeaderField(HttpHeader.ETAG);
+                return returnFileIfExists(file, protocol, client, etag, lastModify);
             } else {
-                // 403 aliyun镜像重定向, 301 重定向code
+                // 301 重定向处理
                 String redirectUrl = conn.getHeaderField(HttpHeader.LOCATION);
                 if (redirectUrl == null) { // 没有重定向连接
                     returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
@@ -76,7 +78,7 @@ public class MClientFileOperation extends MClientOperation {
                 }
                 log.info("Redire {}", redirectUrl);
                 HttpURLConnection redireConn = HttpUtils.getConn(redirectUrl, request.getMethod(), request.getHeaders(), request.getParameters());
-                return returnByRemote(redireConn, request, path, client);
+                return returnByRemote(redireConn, request, file, client);
             }
         } catch (Exception e) {
             log.error("Return from remote failed!", e);
@@ -87,12 +89,11 @@ public class MClientFileOperation extends MClientOperation {
     /**
      * 如果文件存在则返回
      */
-    private boolean returnFileIfExists(String path, String protocol, AbstractClientSocket<byte[]> client, String etag, String lastModify) {
-        File file = new File(path);
+    private boolean returnFileIfExists(File file, String protocol, AbstractClientSocket<byte[]> client, String etag, String lastModify) {
         if (file.exists()) { // 服务器已有，直接返回
             HttpResponse resp = new HttpResponse(protocol, HttpMsg.OK);
             HttpHeader headers = resp.getHeaders();
-            headers.put(HttpHeader.CONTENT_TYPE, getContentType(path));
+            headers.put(HttpHeader.CONTENT_TYPE, getContentType(file.getName()));
             if (StringUtils.isBlank(etag)) etag = getMD5ByFile(file);
             if (etag != null) {
                 headers.put(HttpHeader.X_CHECKSUM_MD5, setMarks(etag, false));
