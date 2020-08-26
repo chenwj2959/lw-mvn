@@ -9,9 +9,8 @@ socket解析http协议
 请求sha1本地生成  
 缓存sha1和md5
 多remote仓库配置  
-
-## 计划方向 
-添加配置：请求sha1本地生成或远程请求、是否返回X-Checksum  
 支持SSL  
+
+## 计划方向   
 上传jar命令  
 注册windows/linux服务脚本  

@@ -1,27 +1,44 @@
 package com.cwj.mvn.framework.socket;
 
+import java.io.FileInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.KeyStore;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 
 import com.cwj.mvn.framework.BaseRunnable;
 import com.cwj.mvn.framework.ThreadPool;
 
 public abstract class AbstractSocketService<T> extends BaseRunnable {
     
+    private static final String SERVER_AGREEMENT = "SSL";// 使用协议
+    private static final String SERVER_KEY_MANAGER = "SunX509";// 密钥管理器
+    private static final String SERVER_KEY_KEYSTORE = "JKS";// 密库
+    
     private final HashMap<String, AbstractClientSocket<T>> clientMap;
 
     private ServerSocket server;
-
     // total client size
     private static int size = 0;
-
+    
+    private String certificatePath;
+    private String certificatePassword;
+    
     public AbstractSocketService(String tag, int port) throws Exception {
+        this(tag, port, false, null, null);
+    }
+
+    public AbstractSocketService(String tag, int port, boolean ssl, String cpath, String cpassword) throws Exception {
         super(tag);
-        server = new ServerSocket(port);
+        server = createServerSocket(port, ssl);
         clientMap = new HashMap<>();
+        this.certificatePath = cpath;
+        this.certificatePassword = cpassword;
     }
 
     @Override
@@ -109,4 +126,26 @@ public abstract class AbstractSocketService<T> extends BaseRunnable {
     public abstract AbstractClientSocket<T> createClientSocket(String tag, Socket socket) throws Exception;
     
     public abstract AbstractClientService<T> createClientService(AbstractClientSocket<T> client);
+    
+    private ServerSocket createServerSocket(int port, boolean ssl) throws Exception {
+        if (ssl) {
+            try (FileInputStream fis = new FileInputStream(certificatePath)) {
+             // 取得SSLContext
+                SSLContext ctx = SSLContext.getInstance(SERVER_AGREEMENT);
+                // 取得SunX509私钥管理器
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(SERVER_KEY_MANAGER);
+                // 取得JKS密库实例
+                KeyStore ks = KeyStore.getInstance(SERVER_KEY_KEYSTORE);
+                // 加载服务端私钥
+                char[] pwd = certificatePassword.toCharArray();
+                ks.load(fis, pwd);
+                // 初始化
+                kmf.init(ks, pwd);
+                // 初始化SSLContext
+                ctx.init(kmf.getKeyManagers(), null, null);
+                // 通过SSLContext取得ServerSocketFactory，创建ServerSocket
+                return ctx.getServerSocketFactory().createServerSocket(port);
+            }
+        } else return new ServerSocket(port);
+    }
 }

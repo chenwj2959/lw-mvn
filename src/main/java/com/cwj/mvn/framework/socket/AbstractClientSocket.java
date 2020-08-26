@@ -15,6 +15,8 @@ import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.net.ssl.SSLSocket;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,8 +110,10 @@ public abstract class AbstractClientSocket<T> {
     public boolean disconnection() {
         try {
             if (socket != null) {
-                socket.shutdownInput();
-                socket.shutdownOutput();
+                if (!(socket instanceof SSLSocket)) {
+                    socket.shutdownInput();
+                    socket.shutdownOutput();
+                }
                 socket.close();
             }
             socket = null;

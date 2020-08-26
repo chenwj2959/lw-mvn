@@ -2,6 +2,8 @@ package com.cwj.mvn.framework.socket;
 
 import java.net.SocketException;
 
+import javax.net.ssl.SSLException;
+
 import com.cwj.mvn.framework.BaseRunnable;
 
 public abstract class AbstractClientService<T> extends BaseRunnable {
@@ -36,7 +38,7 @@ public abstract class AbstractClientService<T> extends BaseRunnable {
                 if (!handlers.doHanlde(message)) {
                     log.error("Do handle message has error, message = {}", message);
                 }
-            } catch (SocketException e) {
+            } catch (SocketException | SSLException e) {
                 log.error(e.getMessage(), e);
                 break;
             } catch (Exception e) {

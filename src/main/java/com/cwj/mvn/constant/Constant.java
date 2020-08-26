@@ -12,7 +12,6 @@ public class Constant {
     
     public static final String LOCAL_REPOSITORY = Settings.getSetting(Settings.LOCAL_REPOSITORY);
     public static final String LOCAL_URL_SUFFIX = Settings.getSetting(Settings.LOCAL_URL_SUFFIX); // 从配置文件中获取URL后缀
-    public static final int LOCAL_PORT = Integer.parseInt(Settings.getSetting(Settings.LOCAL_PORT));
     
     public static final String THREAD_LW_MVN = "lw-mvn";
     

@@ -21,7 +21,9 @@ public class Settings {
     public static final String LOCAL_REPOSITORY = "localRepository";
     public static final String LOCAL_PORT = "localPort";
     public static final String REMOTE_URL = "remoteURL";
-    public static final String VERSION = "version";
+    public static final String USE_SSL = "useSSL";
+    public static final String CERTIFICATE_PATH = "certificatePath";
+    public static final String CERTIFICATE_PASSWORD = "certificatePassword";
     
     private static final String DEFAULT_SETTINGS_NAME = "default-settings.xml";
     private static final String SETTINGS_NAME = "settings.xml";
