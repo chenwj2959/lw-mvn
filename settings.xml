@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
     <localServerURLSuffix>/repository/maven-public</localServerURLSuffix>
-    <localRepository>D:\Demo\jar</localRepository>
+    <localRepository>D:\Demo\Java\Environment\apache-maven-3.3.9-test\bin\jar2</localRepository>
     <localPort>8888</localPort>
-    <remoteURL>https://maven.aliyun.com/repository/public</remoteURL>
+    <remoteURL1>http://192.168.1.12:8081/repository/maven-public/</remoteURL1>
+    <remoteURL2>https://maven.aliyun.com/repository/public</remoteURL2>
+    <remoteURL3>https://repo1.maven.org/maven2/</remoteURL3>
 </settings>

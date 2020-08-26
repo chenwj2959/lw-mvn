@@ -2,6 +2,8 @@ package com.cwj.mvn.framework.http.bean;
 
 import java.util.HashMap;
 
+import com.cwj.mvn.constant.Constant;
+
 /**
  * TODO multipart/form-data
  */
@@ -26,7 +28,7 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String X_CHECKSUM_MD5 = "X-Checksum-MD5";
     
     // Server
-    public static final String DEFAULT_SERVER = "LW-MAVEN/1.0.0";
+    public static final String DEFAULT_SERVER = "LW-MAVEN/" + Constant.VERSION;
     
     // Default user-agent
     public static final String DEFAULT_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)";

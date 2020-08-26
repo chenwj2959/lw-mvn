@@ -1,24 +1,27 @@
 package com.cwj.mvn.core;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import com.cwj.mvn.constant.Constant;
+import com.cwj.mvn.framework.SimpleCache;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
 import com.cwj.mvn.framework.http.bean.HttpResponse;
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperation;
+import com.cwj.mvn.utils.FileUtils;
+import com.cwj.mvn.utils.StringUtils;
 
 public abstract class MClientOperation extends AbstractOperation<byte[]> {
     
-    protected static final String SHA_FILE_SUFFIX = ".sha1";
+    protected static final String SHA1_FILE_SUFFIX = ".sha1";
+    protected static final String SHA1_SHA1_FILE_SUFFIX = ".sha1.sha1";
+    protected static final String MD5_FILE_SUFFIX = ".md5";
+    protected static final String POM_FILE_SUFFIX = ".pom";
+    protected static final String JAR_FILE_SUFFIX = ".jar";
     
     protected static final String HTTP_REQUEST = "HttpRequest";
 
@@ -37,28 +40,18 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     }
     
     /**
-     * 读取*.jar.sha1文件中的内容
-     */
-    protected String readSHA1Str(File jarFile) {
-        String respFilePath = jarFile.getAbsolutePath();
-        File respSHAFile = new File(respFilePath + SHA_FILE_SUFFIX);
-        if (respSHAFile.exists()) {
-            try (FileReader fr = new FileReader(respSHAFile); BufferedReader br = new BufferedReader(fr)) {
-                return br.readLine();
-            } catch (Exception e) {
-                log.error("Read sha1 file failed!", e);
-            }
-        }
-        return getSha1ByFile(jarFile);
-    }
-    
-    /**
-     * 根据jar包输入流获取该文件的sha1码
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
+     * 根据文件获取该文件的sha1码
      */
     protected String getSha1ByFile(File file) {
+        String sha1FileName = file.getName() + SHA1_FILE_SUFFIX;
+        String sha1Str = SimpleCache.get(sha1FileName);
+        if (!StringUtils.isEmpty(sha1Str)) return sha1Str;
+        File sha1File = new File(file.getAbsolutePath() + SHA1_FILE_SUFFIX);
+        if (sha1File.exists()) {
+            sha1Str = readSha1ByFile(sha1File);
+            SimpleCache.put(sha1FileName, sha1Str);
+            return sha1Str;
+        }
         try (FileInputStream fis = new FileInputStream(file)) {
             MessageDigest sha1 = MessageDigest.getInstance("SHA1");
             byte[] data = new byte[1024];
@@ -71,7 +64,10 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
             for (int i = 0; i < hashBytes.length; i++) {
                 sb.append(Integer.toString((hashBytes[i] & 0xff) + 0x100, 16).substring(1));
             }
-            return sb.toString();
+            sha1Str = sb.toString();
+            SimpleCache.put(sha1FileName, sha1Str);
+            FileUtils.write(sha1Str.getBytes(), sha1File);
+            return sha1Str;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return null;
@@ -79,10 +75,23 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     }
     
     /**
-     * 根据jar包二进制输入流获取该文件的sha1码
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
+     * 读取*.jar.sha1文件中的内容
+     */
+    private String readSha1ByFile(File file) {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            int total = fis.available();
+            byte[] buffer = new byte[total];
+            int ans = 0;
+            while (ans < total) ans += fis.read(buffer, ans, total - ans);
+            return new String(buffer);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 根据二进制流获取该文件的sha1码
      */
     protected String getSha1ByByte(byte[] data) {
         try {
@@ -101,12 +110,20 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     }
     
     /**
-     * 根据jar包输入流获取该文件的MD5值
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
+     * 根据文件获取该文件的MD5值
+     * 1. 先查询是否存在.md5文件
+     * 2. 如果没有, 创建.md5文件
      */
     protected String getMD5ByFile(File file) {
+        String md5FileName = file.getName() + MD5_FILE_SUFFIX;
+        String md5Str = SimpleCache.get(md5FileName);
+        if (!StringUtils.isEmpty(md5Str)) return md5Str;
+        File md5File = new File(file.getAbsolutePath() + MD5_FILE_SUFFIX);
+        if (md5File.exists()) {
+            md5Str = readMD5ByFile(md5File);
+            SimpleCache.put(md5FileName, md5Str);
+            return md5Str;
+        }
         try (FileInputStream fis = new FileInputStream(file)) {
             MessageDigest messageDigest = MessageDigest.getInstance("MD5");
             byte[] data = new byte[1024];
@@ -123,7 +140,10 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
                 }
                 strHexString.append(hex);
             }
-            return strHexString.toString();
+            md5Str = strHexString.toString();
+            SimpleCache.put(md5FileName, md5Str);
+            FileUtils.write(md5Str.getBytes(), md5File);
+            return md5Str;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return null;
@@ -131,10 +151,23 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     }
     
     /**
-     * 根据jar包二进制输入流获取该文件的MD5值
-     * @param file
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
+     * 从.md5文件中读取md5
+     */
+    private String readMD5ByFile(File file) {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            int total = fis.available();
+            byte[] buffer = new byte[total];
+            int ans = 0;
+            while (ans < total) ans += fis.read(buffer, ans, total - ans);
+            return new String(buffer);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 根据二进制流获取该文件的MD5值
      */
     protected String getMD5ByByte(byte[] data) {
         try {
@@ -154,5 +187,19 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
             log.error(e.getMessage(), e);
             return null;
         }
+    }
+    
+    /**
+     * 判断是否为文件
+     */
+    protected boolean isFile(String fileName) {
+        return fileName.endsWith(SHA1_FILE_SUFFIX) || fileName.endsWith(POM_FILE_SUFFIX) || fileName.endsWith(JAR_FILE_SUFFIX);
+    }
+    
+    /**
+     * 是否为禁止访问的文件类型
+     */
+    protected boolean cannotAccess(String fileName) {
+        return fileName.endsWith(MD5_FILE_SUFFIX) || fileName.endsWith(SHA1_SHA1_FILE_SUFFIX);
     }
 }

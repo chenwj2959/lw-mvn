@@ -48,6 +48,7 @@ public class MClientHtmlOperation extends MClientOperation {
         if (childes != null) {
             for (File child : childes) {
                 String fileName = child.getName();
+                if (cannotAccess(fileName)) continue; // 不显示禁止访问的文件
                 boolean isFile = isFile(fileName);
                 if (!isFile) fileName += "/";
                 fileStr.append("<a href=\"")
@@ -63,9 +64,5 @@ public class MClientHtmlOperation extends MClientOperation {
         String html = String.format(Constant.HTML_FILES, path, fileStr.toString());
         returnHtml(protocol, html, HttpMsg.OK, client);
         return true;
-    }
-    
-    private boolean isFile(String fileName) {
-        return fileName.endsWith("sha1") || fileName.endsWith("pom") || fileName.endsWith("jar");
     }
 }

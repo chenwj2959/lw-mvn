@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.HashMap;
 
 import com.cwj.mvn.constant.Constant;
+import com.cwj.mvn.framework.Settings;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
 import com.cwj.mvn.framework.http.bean.HttpParameter;
@@ -27,15 +28,29 @@ public class MClientFileOperation extends MClientOperation {
         try {
             HttpRequest request = new HttpRequest(message);
             String path = request.getPath();
-            if (isHtmlReq(path)) {
+            String protocol = request.getProtocol();
+            if (cannotAccess(path)) { // 不允许访问md5文件和.sha1.sha1文件
+                returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
+                return true;
+            }
+            if (!isFile(path)) {
                 paramMap.put(HTTP_REQUEST, request);
                 return nextHandler(message, paramMap, client);
             }
             File file = new File(Constant.LOCAL_REPOSITORY + path);
-            if (returnFileIfExists(file, request.getProtocol(), client, null, null)) return true; // 本地已有, 直接返回
+            if (returnFileIfExists(file, protocol, client, null, null)) return true; // 本地已有, 直接返回
             // 从远程仓库下载
-            HttpURLConnection conn = request.toHttp(Constant.REMOTE_URL);
-            return returnByRemote(conn, request, file, client);
+            int index = 1;
+            while (true) {
+                String remoteURL = Settings.getSetting(Settings.REMOTE_URL + index);
+                if (StringUtils.isBlank(remoteURL)) {
+                    returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
+                    return true;
+                }
+                HttpURLConnection conn = request.toHttp(remoteURL);
+                if (returnByRemote(conn, request, file, client)) return true;
+                index++;
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -50,10 +65,7 @@ public class MClientFileOperation extends MClientOperation {
             String protocol = request.getProtocol();
             if (respCode == HttpURLConnection.HTTP_OK) {
                 int length = conn.getHeaderFieldInt(HttpHeader.CONTENT_LENGTH, 0);
-                if (length == 0) { // 没有文件返回
-                    returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
-                    return false;
-                }
+                if (length == 0) return false; // 没有文件返回
                 InputStream is = conn.getInputStream();
                 try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                     byte[] buffer = new byte[4096];
@@ -61,7 +73,7 @@ public class MClientFileOperation extends MClientOperation {
                     while ((ans = is.read(buffer)) != -1) baos.write(buffer, 0, ans);
                     if (!FileUtils.write(baos.toByteArray(), file)) {
                         // 文件保存失败处理
-                        String respType = getContentType(file.getName());
+                        String respType = conn.getRequestProperty(HttpHeader.CONTENT_TYPE);
                         return returnByByte(baos.toByteArray(), respType, protocol, client);
                     }
                 }
@@ -72,10 +84,7 @@ public class MClientFileOperation extends MClientOperation {
             } else {
                 // 301 重定向处理
                 String redirectUrl = conn.getHeaderField(HttpHeader.LOCATION);
-                if (redirectUrl == null) { // 没有重定向连接
-                    returnHtml(protocol, Constant.HTML_404, HttpMsg.NOT_FOUND, client);
-                    return false;
-                }
+                if (redirectUrl == null) return false; // 没有重定向连接
                 log.info("Redire {}", redirectUrl);
                 HttpURLConnection redireConn = HttpUtils.getConn(redirectUrl, request.getMethod(), request.getHeaders(), request.getParameters());
                 return returnByRemote(redireConn, request, file, client);
@@ -93,13 +102,14 @@ public class MClientFileOperation extends MClientOperation {
         if (file.exists()) { // 服务器已有，直接返回
             HttpResponse resp = new HttpResponse(protocol, HttpMsg.OK);
             HttpHeader headers = resp.getHeaders();
-            headers.put(HttpHeader.CONTENT_TYPE, getContentType(file.getName()));
+            String fileName = file.getName();
+            headers.put(HttpHeader.CONTENT_TYPE, getContentType(fileName));
             if (StringUtils.isBlank(etag)) etag = getMD5ByFile(file);
             if (etag != null) {
                 headers.put(HttpHeader.X_CHECKSUM_MD5, setMarks(etag, false));
                 headers.put(HttpHeader.ETAG, setMarks(etag, true));
             }
-            String sha1 = readSHA1Str(file);
+            String sha1 = getSha1ByFile(file);
             if (!StringUtils.isBlank(sha1)) headers.put(HttpHeader.X_CHECKSUM_SHA, sha1);
             if (StringUtils.isBlank(lastModify)) lastModify = DateUtils.dateToString(file.lastModified(), DateUtils.EdMyHms_GMT);
             headers.put(HttpHeader.LAST_MODIFIED, lastModify);
@@ -168,13 +178,6 @@ public class MClientFileOperation extends MClientOperation {
      * 根据route获取对应的contentType
      */
     private String getContentType(String route) {
-        return route.endsWith(".jar") ? HttpHeader.TYPE_JAVA_ARCHIVE : HttpHeader.TYPE_TEXT_XML;
-    }
-    
-    /**
-     * 是否为html请求
-     */
-    private boolean isHtmlReq(String route) {
-        return !(route.contains(".jar") || route.contains(SHA_FILE_SUFFIX) || route.contains(".pom"));
+        return route.endsWith("POM_FILE_SUFFIX") ? HttpHeader.TYPE_JAVA_ARCHIVE : HttpHeader.TYPE_TEXT_XML;
     }
 }

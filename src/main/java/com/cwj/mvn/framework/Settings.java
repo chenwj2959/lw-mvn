@@ -13,8 +13,6 @@ import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cwj.mvn.utils.StringUtils;
-
 public class Settings {
     
     private static final Logger log = LoggerFactory.getLogger(Settings.class);
@@ -23,11 +21,11 @@ public class Settings {
     public static final String LOCAL_REPOSITORY = "localRepository";
     public static final String LOCAL_PORT = "localPort";
     public static final String REMOTE_URL = "remoteURL";
+    public static final String VERSION = "version";
     
     private static final String DEFAULT_SETTINGS_NAME = "default-settings.xml";
     private static final String SETTINGS_NAME = "settings.xml";
     private static final HashMap<String, String> settingMap = new HashMap<>();
-    private static final HashMap<String, String> defaultSettingMap = new HashMap<>();
     
     /**
      * 加载settings文件
@@ -35,25 +33,23 @@ public class Settings {
     public static void loadSettings() {
         File settingsFile = new File(System.getProperty("user.dir") + File.separator + SETTINGS_NAME);
         if (settingsFile.exists()) {
-            log.info("Read {} file", SETTINGS_NAME);
             try {
                 readToMap(new FileInputStream(settingsFile), settingMap);
             } catch (FileNotFoundException e) {}
         }
         InputStream is = Settings.class.getResourceAsStream("/" + DEFAULT_SETTINGS_NAME);
-        if (is != null) {
-            log.info("Read {} file", DEFAULT_SETTINGS_NAME);
-            readToMap(is, defaultSettingMap);
-        }
+        if (is != null) readToMap(is, settingMap);
+    }
+    
+    public static void setSetting(String key, String value) {
+        settingMap.put(key, value);
     }
     
     /**
      * 获取配置
      */
     public static String getSetting(String key) {
-        String value = null;
-        if (settingMap.size() > 0) value = settingMap.get(key);
-        return StringUtils.isBlank(value) ? defaultSettingMap.get(key) : value;
+        return settingMap.get(key);
     }
     
     /**
@@ -66,6 +62,7 @@ public class Settings {
             for (Object children : root.elements()) {
                 Element childEle = (Element) children;
                 String name = childEle.getName();
+                if (settingMap.containsKey(name)) continue;
                 String value = childEle.getText();
                 settingMap.put(name, value);
             }
