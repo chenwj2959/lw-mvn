@@ -23,9 +23,13 @@ public class HttpHeader extends HashMap<String, String> {
     public static final String CONNECTION = "Connection";
     public static final String HOST = "Host";
     public static final String USER_AGENT = "User-Agent";
+    public static final String CACHE_CONTROL = "Cache-Control";
     
     public static final String X_CHECKSUM_SHA = "X-Checksum-SHA";
     public static final String X_CHECKSUM_MD5 = "X-Checksum-MD5";
+    
+    // Cache-Control
+    public static final String NO_CACHE = "no-cache";
     
     // Server
     public static final String DEFAULT_SERVER = "LW-MAVEN/" + Constant.VERSION;

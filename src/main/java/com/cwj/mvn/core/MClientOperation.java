@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
 
-import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.framework.SimpleCache;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
@@ -29,10 +28,8 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     protected void returnHtml(String protocol, String html, HttpMsg httpMsg, AbstractClientSocket<byte[]> client) {
         HttpResponse resp = new HttpResponse(protocol, httpMsg);
         HttpHeader headers = new HttpHeader();
-        headers.put(HttpHeader.CONNECTION, HttpHeader.KEEP_ALIVE);
-        headers.put(HttpHeader.LAST_MODIFIED, Constant.LAST_MODIFIED);
         headers.put(HttpHeader.CONTENT_TYPE, HttpHeader.TYPE_HTML);
-        headers.put(HttpHeader.ETAG, getSha1ByByte(html.getBytes()));
+        headers.put(HttpHeader.CACHE_CONTROL, HttpHeader.NO_CACHE);
         resp.setHeaders(headers);
         HttpParameter param = new HttpParameter();
         param.put(HttpParameter.DATA, html);
