@@ -35,7 +35,7 @@ public class Constant {
     public static final String HTML_FILES = "<!DOCTYPE html>\n" + 
             "<html>\n" + 
             "<head>\n" + 
-            "    <title>Central Repository: ant-contrib</title>\n" + 
+            "    <title>LW-MVN " + Constant.VERSION + "</title>\n" + 
             "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" + 
             "    <style>\n" + 
             "body {\n" + 

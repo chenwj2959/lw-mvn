@@ -41,6 +41,7 @@ public class MClientHtmlOperation extends MClientOperation {
         }
         StringBuilder fileStr = new StringBuilder();
         if (path.length() > 1) { // 不在根路径，添加../返回上一级a链接
+            fileStr.append("<a href=\"/\">./</a>\n");
             fileStr.append("<a href=\"../\">../</a>\n");
         }
         File[] children = root.listFiles();
@@ -50,14 +51,9 @@ public class MClientHtmlOperation extends MClientOperation {
                 boolean isFile = isFile(fileName);
                 String aurl = fileName;
                 if (!isFile) aurl += "/";
-                fileStr.append("<a href=\"")
-                    .append(aurl);
+                fileStr.append("<a href=\"").append(aurl);
                 if (isFile) fileStr.append("\" download=\"").append(fileName);
-                fileStr.append("\" title=\"")
-                    .append(aurl)
-                    .append("\">")
-                    .append(aurl)
-                    .append("</a>\n");
+                fileStr.append("\">").append(aurl).append("</a>\n");
             }
         }
         String html = String.format(Constant.HTML_FILES, path, fileStr.toString());
