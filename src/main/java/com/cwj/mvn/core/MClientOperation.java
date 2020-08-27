@@ -17,11 +17,12 @@ import com.cwj.mvn.utils.StringUtils;
 
 public abstract class MClientOperation extends AbstractOperation<byte[]> {
     
-    protected static final String SHA1_FILE_SUFFIX = ".sha1";
-    protected static final String SHA1_SHA1_FILE_SUFFIX = ".sha1.sha1";
-    protected static final String MD5_FILE_SUFFIX = ".md5";
-    protected static final String POM_FILE_SUFFIX = ".pom";
-    protected static final String JAR_FILE_SUFFIX = ".jar";
+    private static final String SHA1_FILE_SUFFIX = ".sha1";
+    private static final String SHA1_SHA1_FILE_SUFFIX = ".sha1.sha1";
+    private static final String MD5_FILE_SUFFIX = ".md5";
+    private static final String POM_FILE_SUFFIX = ".pom";
+    private static final String JAR_FILE_SUFFIX = ".jar";
+    private static final String XML_FILE_SUFFIX = ".xml";
     
     protected static final String HTTP_REQUEST = "HttpRequest";
 
@@ -193,7 +194,7 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
      * 判断是否为文件
      */
     protected boolean isFile(String fileName) {
-        return fileName.endsWith(SHA1_FILE_SUFFIX) || fileName.endsWith(POM_FILE_SUFFIX) || fileName.endsWith(JAR_FILE_SUFFIX);
+        return fileName.endsWith(SHA1_FILE_SUFFIX) || fileName.endsWith(POM_FILE_SUFFIX) || fileName.endsWith(JAR_FILE_SUFFIX) || fileName.endsWith(XML_FILE_SUFFIX);
     }
     
     /**
