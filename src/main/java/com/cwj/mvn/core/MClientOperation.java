@@ -30,7 +30,7 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     protected static final String HTTP_REQUEST = "HttpRequest";
     
     protected static final String CLIENT_IP_PATH = Constant.ROOT + "ClientIPAddresses.txt";
-    private static final int CLIENT_IP_EXPIRE = 5000;
+    private static final int CLIENT_IP_EXPIRE = 180000;
 
     protected void returnHtml(String protocol, String html, HttpMsg httpMsg, AbstractClientSocket<byte[]> client) {
         HttpResponse resp = new HttpResponse(protocol, httpMsg);
