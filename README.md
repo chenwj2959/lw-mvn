@@ -10,6 +10,7 @@ socket解析http协议
 缓存sha1和md5
 多remote仓库配置  
 支持SSL  
+记录访问IP
 
 ## 计划方向   
 上传jar命令  

@@ -2,8 +2,11 @@ package com.cwj.mvn.core;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.security.MessageDigest;
+import java.util.Date;
 
+import com.cwj.mvn.constant.Constant;
 import com.cwj.mvn.framework.SimpleCache;
 import com.cwj.mvn.framework.http.HttpMsg;
 import com.cwj.mvn.framework.http.bean.HttpHeader;
@@ -11,6 +14,7 @@ import com.cwj.mvn.framework.http.bean.HttpParameter;
 import com.cwj.mvn.framework.http.bean.HttpResponse;
 import com.cwj.mvn.framework.socket.AbstractClientSocket;
 import com.cwj.mvn.framework.socket.AbstractOperation;
+import com.cwj.mvn.utils.DateUtils;
 import com.cwj.mvn.utils.FileUtils;
 import com.cwj.mvn.utils.StringUtils;
 
@@ -24,6 +28,9 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
     private static final String XML_FILE_SUFFIX = ".xml";
     
     protected static final String HTTP_REQUEST = "HttpRequest";
+    
+    protected static final String CLIENT_IP_PATH = Constant.ROOT + "ClientIPAddresses.txt";
+    private static final int CLIENT_IP_EXPIRE = 5000;
 
     protected void returnHtml(String protocol, String html, HttpMsg httpMsg, AbstractClientSocket<byte[]> client) {
         HttpResponse resp = new HttpResponse(protocol, httpMsg);
@@ -199,5 +206,23 @@ public abstract class MClientOperation extends AbstractOperation<byte[]> {
      */
     protected boolean cannotAccess(String fileName) {
         return fileName.endsWith(MD5_FILE_SUFFIX) || fileName.endsWith(SHA1_SHA1_FILE_SUFFIX);
+    }
+    
+    /**
+     * 保存访客IP
+     */
+    protected void saveClientIP(AbstractClientSocket<byte[]> client) {
+        String ip = client.getRemoteIp();
+        Object count = SimpleCache.get(ip);
+        SimpleCache.put(ip, count == null ? 1 : (int) count + 1, CLIENT_IP_EXPIRE, (key, value) -> {
+            String now = DateUtils.dateToString(new Date(), DateUtils.yMdHmsS);
+            String record = "[" + now + "] " + key + " - " + value + Constant.NEW_LINE;
+            try (FileOutputStream fos = new FileOutputStream(CLIENT_IP_PATH, true)) {
+                fos.write(record.getBytes());
+                fos.flush();
+            } catch (Exception e) {
+                log.error("Save access IP record failed! " + record, e);
+            }
+        });
     }
 }

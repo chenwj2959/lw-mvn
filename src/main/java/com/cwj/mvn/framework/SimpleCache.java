@@ -29,12 +29,25 @@ public class SimpleCache {
      * @param expire 过期时间, 毫秒, 0或负数表示无限长
      */
     public static void put(String key, Object value, long expire) {
-        //清除原键值对
+        put(key, value, expire, null);
+    }
+    
+    /**
+     * 添加缓存
+     * @param expire 过期时间, 毫秒, 0或负数表示无限长
+     * @param expireCallback 过期回调接口
+     */
+    public static void put(String key, Object value, long expire, ExpireCallback expireCallback) {
+      //清除原键值对
         SimpleCache.remove(key);
         //设置过期时间
         if (expire > 0) {
-            Future<?> future = executor.schedule(() -> cacheMap.remove(key), expire, TimeUnit.MILLISECONDS);
-            SimpleCache.put(key, new Entity(value, future));
+            Future<?> future = executor.schedule(() -> {
+                Entity entity = cacheMap.remove(key);
+                if (entity != null && entity.expireCallback != null) 
+                    entity.expireCallback.callback(key, value);
+            }, expire, TimeUnit.MILLISECONDS);
+            SimpleCache.put(key, new Entity(value, future, expireCallback));
         } else {
             //不设置过期时间
             SimpleCache.put(key, new Entity(value, null));
@@ -83,9 +96,20 @@ public class SimpleCache {
         
         private Future<?> future;
         
+        private ExpireCallback expireCallback;
+        
         private Entity(Object value, Future<?> future) {
+            this(value, future, null);
+        }
+        
+        private Entity(Object value, Future<?> future, ExpireCallback expireCallback) {
             this.value = value;
             this.future = future;
+            this.expireCallback = expireCallback;
         }
+    }
+    
+    public static interface ExpireCallback {
+        void callback(String key, Object value);
     }
 }

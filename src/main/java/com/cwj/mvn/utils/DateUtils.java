@@ -8,6 +8,7 @@ import java.util.Locale;
 public class DateUtils {
     // Tue, 31 Mar 2020 09:43:31 GMT
     public static final String EdMyHms_GMT = "EEE, d MMM yyyy HH:mm:ss 'GMT'";
+    public static final String yMdHmsS = "yyyy-MM-dd HH:mm:ss.SSS";
     
     public static String dateToString(Date date, String pattern) {
         SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);

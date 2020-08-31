@@ -36,11 +36,11 @@ public class Settings {
         File settingsFile = new File(System.getProperty("user.dir") + File.separator + SETTINGS_NAME);
         if (settingsFile.exists()) {
             try {
-                readToMap(new FileInputStream(settingsFile), settingMap);
+                readToMap(new FileInputStream(settingsFile));
             } catch (FileNotFoundException e) {}
         }
         InputStream is = Settings.class.getResourceAsStream("/" + DEFAULT_SETTINGS_NAME);
-        if (is != null) readToMap(is, settingMap);
+        if (is != null) readToMap(is);
     }
     
     public static void setSetting(String key, String value) {
@@ -57,7 +57,7 @@ public class Settings {
     /**
      * 从XML读取配置到HashMap
      */
-    private static void readToMap(InputStream is, HashMap<String, String> settingMap) {
+    private static void readToMap(InputStream is) {
         try {
             Document settings = new SAXReader().read(is);
             Element root = settings.getRootElement();

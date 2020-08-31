@@ -1,1 +1,0 @@
-mvn dependency:get -DremoteRepositories=http://127.0.0.1:8081 -DgroupId=com.alibaba -DartifactId=fastjson -Dversion=1.2.62

@@ -1,5 +1,6 @@
 package com.cwj.mvn.constant;
 
+import java.io.File;
 import java.nio.charset.Charset;
 
 import com.cwj.mvn.framework.Settings;
@@ -8,7 +9,9 @@ public class Constant {
 
     public static final Charset UTF8 = Charset.forName("utf8");
     public static final String LOG_NAME = "logName";
-    public static final String VERSION = "1.0.5";
+    public static final String VERSION = "1.0.6";
+    public static final String ROOT = System.getProperty("user.dir") + File.separator;
+    public static final String NEW_LINE = System.getProperty("line.separator");
     
     public static final String LOCAL_REPOSITORY = Settings.getSetting(Settings.LOCAL_REPOSITORY);
     public static final String LOCAL_URL_SUFFIX = Settings.getSetting(Settings.LOCAL_URL_SUFFIX); // 从配置文件中获取URL后缀

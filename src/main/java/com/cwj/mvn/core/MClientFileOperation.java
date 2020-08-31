@@ -26,6 +26,7 @@ public class MClientFileOperation extends MClientOperation {
     @Override
     public Boolean handle(byte[] message, HashMap<String, Object> paramMap, AbstractClientSocket<byte[]> client) {
         try {
+            saveClientIP(client);
             HttpRequest request = new HttpRequest(message);
             String path = request.getPath();
             String protocol = request.getProtocol();
